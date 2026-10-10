@@ -1,0 +1,32 @@
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+
+# Local state and artifacts
+.local/
+tmp/
+logs/
+*.log
+coverage/
+dist/
+build/
+*.test
+
+# Dependencies and caches
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
