@@ -3,7 +3,7 @@
 ## Scope
 
 These instructions apply to the entire repository. Read README.md and the relevant docs before changes.
-The repository currently contains design documents and scaffolding only, not a working platform.
+The repository includes an isolated sandbox PoC under poc/sandbox, plus design documents and scaffolding. It is not a working platform. See ADR 0001 and the PoC README before execution changes.
 
 ## Product constraints
 

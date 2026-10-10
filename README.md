@@ -2,7 +2,7 @@
 
 面向服务器、本机和在线边缘节点的统一 Agent 执行平台。
 
-> 当前状态：项目初始化。仓库包含设计文档与目录骨架，尚无可运行服务；容量指标均为待验证目标，不代表已具备的能力。
+> 当前状态：沙箱 PoC 开发中。仓库包含设计、目录骨架和独立验证脚本，尚无完整平台服务；容量指标均为待验证目标，不代表已具备的能力。
 
 ## MVP 目标
 
@@ -19,6 +19,8 @@
 - [MVP 范围与验收](docs/mvp.md)
 - [架构与可靠性约束](docs/architecture.md)
 - [实施路线](docs/roadmap.md)
+- [沙箱 PoC 操作说明](poc/sandbox/README.md)
+- [沙箱验收矩阵](docs/sandbox-poc.md)
 - [架构决策记录](docs/adr/README.md)
 - [贡献规范](CONTRIBUTING.md)
 - [Agent 开发约束](AGENTS.md)
@@ -36,13 +38,13 @@
 | `tests/acceptance/` | 故障、容量及端到端验收 |
 | `docs/` | 需求、架构、路线与决策 |
 
-以上组件目录目前为占位。实现应从单任务闭环开始，见实施路线 M1。
+平台组件目录仍为占位；poc/sandbox 提供独立的代码、命令和浏览器执行验证脚本。
 
 ## 技术决策状态
 
 控制面按模块化服务设计，使用 PostgreSQL 与对象存储作为目标存储方案。
 工作流引擎在 Hatchet / Temporal 中择一；Agent Runtime 和模型网关各选一种。
-语言、版本、本机首个目标操作系统及部署方案由 PoC 和 ADR 确定，当前不预设兼容性承诺。
+OpenSandbox 已选为动态执行 PoC 基线，详见 ADR 0001。Python 仅为 PoC 脚本语言；平台语言、本机首个目标操作系统及生产部署方案仍待决。
 
 ## 获取项目
 
@@ -51,7 +53,7 @@ git clone https://github.com/wd202003-design/agent-infra.git
 cd agent-infra
 ```
 
-当前无服务启动命令。M1 实现时必须补充依赖、配置、启动与验证步骤。
+先按 [沙箱 PoC 操作说明](poc/sandbox/README.md) 在 Linux 测试 VM 上验证执行链路。当前尚无 Web、统一 Runner 或任务 API 服务。
 
 ## 许可与凭证
 
