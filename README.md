@@ -2,7 +2,7 @@
 
 面向服务器、本机和在线边缘节点的统一 Agent 执行平台。
 
-> 当前状态：沙箱 PoC 开发中。仓库包含设计、目录骨架和独立验证脚本，尚无完整平台服务；容量指标均为待验证目标，不代表已具备的能力。
+> 当前状态：M1 开发版。已提供 Web、持久化任务 API、单进程执行器和沙箱适配；尚无模型循环或分布式 Runner；容量指标均为待验证目标，不代表已具备的能力。
 
 ## MVP 目标
 
@@ -19,6 +19,7 @@
 - [MVP 范围与验收](docs/mvp.md)
 - [架构与可靠性约束](docs/architecture.md)
 - [实施路线](docs/roadmap.md)
+- [启动开发控制台](devserver/README.md)
 - [沙箱 PoC 操作说明](poc/sandbox/README.md)
 - [沙箱验收矩阵](docs/sandbox-poc.md)
 - [架构决策记录](docs/adr/README.md)
@@ -38,7 +39,7 @@
 | `tests/acceptance/` | 故障、容量及端到端验收 |
 | `docs/` | 需求、架构、路线与决策 |
 
-平台组件目录仍为占位；poc/sandbox 提供独立的代码、命令和浏览器执行验证脚本。
+devserver 提供单机开发实现；平台组件目录仍为规划占位。poc/sandbox 提供独立沙箱验收脚本。
 
 ## 技术决策状态
 
@@ -53,7 +54,9 @@ git clone https://github.com/wd202003-design/agent-infra.git
 cd agent-infra
 ```
 
-先按 [沙箱 PoC 操作说明](poc/sandbox/README.md) 在 Linux 测试 VM 上验证执行链路。当前尚无 Web、统一 Runner 或任务 API 服务。
+先按 [开发版启动说明](devserver/README.md) 启动 http://127.0.0.1:8765。默认 Demo 仅模拟任务状态，不执行源码。切换真实 OpenSandbox 或 CubeSandbox 前，需要完成各自部署和隔离验收。
+
+开发版使用 Python/FastAPI/SQLite，见 ADR 0002；不代表已确定正式控制面语言、工作流引擎或生产数据库替代方案。
 
 ## 许可与凭证
 

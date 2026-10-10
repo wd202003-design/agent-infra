@@ -3,7 +3,7 @@
 ## Scope
 
 These instructions apply to the entire repository. Read README.md and the relevant docs before changes.
-The repository includes an isolated sandbox PoC under poc/sandbox, plus design documents and scaffolding. It is not a working platform. See ADR 0001 and the PoC README before execution changes.
+The repository includes an isolated sandbox PoC under poc/sandbox, plus design documents and scaffolding. A single-process development task service is available under devserver; it is not the complete platform. Read ADR 0002 for its temporary SQLite/Python scope. See ADR 0001 and the PoC README before execution changes.
 
 ## Product constraints
 

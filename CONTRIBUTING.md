@@ -22,3 +22,5 @@
 PR 说明问题、行为变化、验证方法及影响。
 沙箱 PoC 的本地测试命令见 poc/sandbox/README.md；GitHub Actions 运行 SDK 导入、CLI 和生命周期单元测试。真实沙箱集成必须单独报告，不能用模拟 SDK 测试代替。
 未执行的验证须写明未执行，不声称通过。
+
+开发服务验证：按 devserver/README.md 运行 tests/test_devserver.py。
