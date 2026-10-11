@@ -16,6 +16,7 @@
 
 ## 文档入口
 
+- [按目录推进的设计需求](docs/requirements.md)
 - [MVP 范围与验收](docs/mvp.md)
 - [架构与可靠性约束](docs/architecture.md)
 - [实施路线](docs/roadmap.md)
@@ -39,7 +40,7 @@
 | `tests/acceptance/` | 故障、容量及端到端验收 |
 | `docs/` | 需求、架构、路线与决策 |
 
-devserver 提供单机开发实现；平台组件目录仍为规划占位。poc/sandbox 提供独立沙箱验收脚本。
+devserver 提供单机开发实现；平台组件目录已补充模块需求与验收设计，正式代码尚未实现。poc/sandbox 提供独立沙箱验收脚本。
 
 ## 技术决策状态
 

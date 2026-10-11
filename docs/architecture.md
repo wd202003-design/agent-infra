@@ -2,6 +2,8 @@
 
 本文为正式平台目标设计；独立沙箱 PoC 与 devserver 单进程开发服务已提供。开发服务的 Python/SQLite 范围和限制见 ADR 0002，不代表下列正式架构已全部实现。
 
+模块需求见 [需求索引](requirements.md)；正式接口与状态细化见 [契约草案](../contracts/README.md)。新增细节由提议中的 ADR 0003 跟踪，尚待评审冻结。
+
 ## 模块关系
 
 ```mermaid
