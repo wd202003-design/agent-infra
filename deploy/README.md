@@ -1,6 +1,6 @@
 # deploy：环境与运维需求
 
-状态：正式部署文件待选型后实现。现有开发启动只使用 [devserver 说明](../devserver/README.md)；真实沙箱准备见 [PoC](../poc/sandbox/README.md)。本文不提供尚未存在的启动命令。
+状态：已提供首轮 Dockerfile、PostgreSQL Compose、凭证初始化和 [正式模块启动说明](platform.md)，尚未在本环境运行 Docker。旧开发启动使用 [devserver 说明](../devserver/README.md)；真实沙箱准备见 [PoC](../poc/sandbox/README.md)。本文不提供尚未存在的启动命令。
 
 ## 环境划分
 

@@ -6,6 +6,8 @@
 
 - [0003：正式平台契约与状态职责草案](0003-platform-contract-draft.md)：提议，待引擎故障验证与契约评审后接受。
 
+- [0004：正式模块首轮实现边界](0004-modular-platform-increment.md)：接受 Python/PostgreSQL/独立 Runner 实现范围，完整 MVP 与生产验收未完成。
+
 其他候选不等于已确定选型。
 
 新增决策时复制 template.md 为 0001-short-title.md 等文件，记录背景、备选、验证依据及代价。

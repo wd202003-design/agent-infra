@@ -1,6 +1,6 @@
 # runner：统一执行节点需求
 
-状态：正式 Runner 尚未实现；devserver worker 不是分布式 Runner。协议依赖 [contracts](../contracts/README.md)，执行生命周期见 [契约草案](../contracts/task-lifecycle.md)。
+状态：已有独立 Python Runner，`python -m runner` 启动；支持单槽位主动领取、journal、续租与有限 Agent 循环。当前缺口见 [实现状态](../docs/implementation-status.md)。协议依赖 [contracts](../contracts/README.md)，执行生命周期见 [契约草案](../contracts/task-lifecycle.md)。
 
 ## 输入、输出与职责
 

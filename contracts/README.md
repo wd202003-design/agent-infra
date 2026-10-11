@@ -1,6 +1,6 @@
 # contracts：版本化契约需求
 
-状态：正式契约设计草案，未实现；新增状态职责提议见 [ADR 0003](../docs/adr/0003-platform-contract-draft.md)。现有开发 API 继续以 [devserver](../devserver/README.md) 为准。本目录后续保存 OpenAPI/JSON Schema 或选定协议定义及兼容性测试，具体格式待决。
+状态：已实现子集由 `models.py` 与 [OpenAPI v1](openapi-v1.json) 定义，`PYTHONPATH=control-plane:. python -m contracts.export` 可重新导出；实现决策见 ADR 0004。下文保留完整设计草案；新增状态职责提议见 [ADR 0003](../docs/adr/0003-platform-contract-draft.md)。现有开发 API 继续以 [devserver](../devserver/README.md) 为准。本目录后续保存 OpenAPI/JSON Schema 或选定协议定义及兼容性测试，具体格式待决。
 
 ## 数据对象和信任边界
 
@@ -16,7 +16,7 @@
 
 ## 接口能力草案
 
-正式 HTTP 命名空间拟为 `/v1`；下表是能力分组，路径和字段须随 ADR/schema 冻结，当前不能直接调用。Runner 采用主动出站连接，传输协议待决。
+正式 HTTP 命名空间拟为 `/v1`；下表是完整能力分组，已实现路径和字段以 OpenAPI 为准，其余继续待决。当前 Runner 使用主动 HTTP 领取/续租，协议版本 1.0。
 
 | 调用方 | 能力 | 成功及失败语义 |
 |---|---|---|

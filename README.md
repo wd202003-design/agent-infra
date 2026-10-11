@@ -2,7 +2,7 @@
 
 面向服务器、本机和在线边缘节点的统一 Agent 执行平台。
 
-> 当前状态：M1 开发版。已提供 Web、持久化任务 API、单进程执行器和沙箱适配；尚无模型循环或分布式 Runner；容量指标均为待验证目标，不代表已具备的能力。
+> 当前状态：正式模块首轮实现。已提供 PostgreSQL 控制面、独立 Runner、v1 契约、Web 和有限模型工具循环；真实沙箱/模型及三类节点、容量仍待验收。完整差距见 docs/implementation-status.md。
 
 ## MVP 目标
 
@@ -16,6 +16,8 @@
 
 ## 文档入口
 
+- [正式模块启动](deploy/platform.md)
+- [实现状态与验证证据](docs/implementation-status.md)
 - [按目录推进的设计需求](docs/requirements.md)
 - [MVP 范围与验收](docs/mvp.md)
 - [架构与可靠性约束](docs/architecture.md)
@@ -40,13 +42,13 @@
 | `tests/acceptance/` | 故障、容量及端到端验收 |
 | `docs/` | 需求、架构、路线与决策 |
 
-devserver 提供单机开发实现；平台组件目录已补充模块需求与验收设计，正式代码尚未实现。poc/sandbox 提供独立沙箱验收脚本。
+正式模块位于 control-plane、runner、contracts、web；deploy 和 examples 提供启动与样例。devserver 保留早期开发实现，poc/sandbox 保留独立沙箱验证脚本。
 
 ## 技术决策状态
 
 控制面按模块化服务设计，使用 PostgreSQL 与对象存储作为目标存储方案。
 工作流引擎在 Hatchet / Temporal 中择一；Agent Runtime 和模型网关各选一种。
-OpenSandbox 已选为动态执行 PoC 基线，详见 ADR 0001。Python 仅为 PoC 脚本语言；平台语言、本机首个目标操作系统及生产部署方案仍待决。
+OpenSandbox 为 PoC 基线，生产沙箱仍待实测。ADR 0004 选择 Python 作为首轮模块语言、Linux 为首个节点 OS，数据库队列与有限 JSON Runtime 作为当前实现；外部工作流引擎、Runtime/网关产品选型仍待决。
 
 ## 获取项目
 
@@ -55,7 +57,7 @@ git clone https://github.com/wd202003-design/agent-infra.git
 cd agent-infra
 ```
 
-先按 [开发版启动说明](devserver/README.md) 启动 http://127.0.0.1:8765。默认 Demo 仅模拟任务状态，不执行源码。切换真实 OpenSandbox 或 CubeSandbox 前，需要完成各自部署和隔离验收。
+按 [正式模块启动说明](deploy/platform.md) 启动 http://127.0.0.1:8766。默认 Demo 不执行源码。旧版开发控制台仍可按 devserver/README.md 启动在 8765；两个服务使用不同数据和契约。正式 Runner 暂未开放 Cube 后端。
 
 开发版使用 Python/FastAPI/SQLite，见 ADR 0002；不代表已确定正式控制面语言、工作流引擎或生产数据库替代方案。
 

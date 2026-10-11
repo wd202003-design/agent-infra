@@ -1,6 +1,6 @@
 # control-plane：控制面设计需求
 
-状态：正式模块尚未实现。现有单机试验在 `devserver/`；本目录采用何种语言、引擎、Runtime 和网关均须 ADR 决策。范围与顺序见 [需求索引](../docs/requirements.md)。
+状态：已有 Python/PostgreSQL 首轮实现 `infra_control/` 与 `migrations/`。实现决策见 ADR 0004，启动见 [部署说明](../deploy/platform.md)，剩余需求见 [实现状态](../docs/implementation-status.md)。下文保留完整目标。
 
 ## 职责与模块
 

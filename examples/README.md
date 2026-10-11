@@ -1,6 +1,6 @@
 # examples：业务样例需求
 
-状态：本目录仅有样例设计，尚无可执行示例。现有固定沙箱 fixture 位于 `poc/sandbox/`，不能替代以下真实模型驱动 Agent 样例。
+状态：已有 `agents.json` 与 `bootstrap.py`，提供固定代码/Shell/浏览器及有限模型 Agent 的注册。尚无 EX-01/02/03 的完整真实验收证据；下文为目标。现有固定沙箱 fixture 位于 poc/sandbox。
 
 每个样例必须提交无敏感数据的 fixture、固定 Agent 版本/摘要、输入 schema、工具/网络/文件策略、资源/步数/时间/费用上限、执行方式、断言和可重现证据。不存放真实用户工作区或生产站点数据。
 

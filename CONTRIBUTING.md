@@ -24,3 +24,5 @@ PR 说明问题、行为变化、验证方法及影响。
 未执行的验证须写明未执行，不声称通过。
 
 开发服务验证：按 devserver/README.md 运行 tests/test_devserver.py。
+
+正式模块验证：按 docs/implementation-status.md 运行 tests/acceptance/test_platform.py；PostgreSQL CI 与本地显式 SQLite 测试分别记录。修改 contracts/models.py 或 API 后运行 `PYTHONPATH=control-plane:. python -m contracts.export`，提交更新的 OpenAPI。

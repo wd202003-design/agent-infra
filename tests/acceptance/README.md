@@ -1,6 +1,6 @@
 # tests/acceptance：验收设计
 
-状态：正式端到端用例待实现/执行。下表为测试计划，不是结果。当前 `tests/test_devserver.py` 的 15 项测试和沙箱 PoC 的 9 项模拟检查仅证明开发范围；具体已有证据见 [devserver](../../devserver/README.md)。
+状态：已有 `test_platform.py` 的 28 项自动化用例，覆盖正式模块实现子集；运行方式与环境证据见 [实现状态](../../docs/implementation-status.md)。下表是完整测试计划，不是全部已通过结果。旧开发版 15 项与沙箱 PoC 9 项检查继续保留。
 
 ## 需求追踪与用例
 

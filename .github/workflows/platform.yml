@@ -1,0 +1,34 @@
+name: Formal platform checks
+on: [push, pull_request]
+jobs:
+  postgres-contracts:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: agent_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d agent_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r control-plane/requirements.txt -r runner/requirements.txt
+      - name: PostgreSQL state, authorization and Runner tests
+        env:
+          PYTHONPATH: control-plane:.
+          TEST_DATABASE_URL: postgresql://test:test-only-password@localhost:5432/agent_test
+        run: python -m unittest discover -s tests/acceptance -p 'test_*.py' -v
+      - run: node --check web/app.js
+      - name: Contract snapshot stays in sync
+        env:
+          PYTHONPATH: control-plane:.
+        run: |
+          python -m contracts.export
+          git diff --exit-code -- contracts/openapi-v1.json
