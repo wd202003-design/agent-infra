@@ -1,0 +1,6 @@
+[
+  {"agent_id":"python-analysis","version":"1","description":"固定样例：统计合成数据","mode":"program","kind":"python","source":"import json\nvalues=[2,4,6,8]\nprint(json.dumps({'count':len(values),'sum':sum(values),'mean':sum(values)/len(values)}))","tools":["python"]},
+  {"agent_id":"shell-check","version":"1","description":"固定样例：沙箱 Shell","mode":"program","kind":"shell","source":"printf 'sandbox-shell-ok\\n'","tools":["shell"]},
+  {"agent_id":"browser-fixture","version":"1","description":"固定样例：隔离浏览器读取本地 HTML","mode":"program","kind":"browser","source":"from playwright.sync_api import sync_playwright\nwith sync_playwright() as p:\n b=p.chromium.launch(headless=True,args=['--no-sandbox'])\n page=b.new_page()\n page.set_content('<h1>Agent Infra</h1><p id=total>20</p>')\n print(page.locator('#total').inner_text())\n b.close()","tools":["browser"]},
+  {"agent_id":"bounded-analyst","version":"1","description":"模型驱动的有限分析 Agent","mode":"agent","instruction":"Analyze only the synthetic data supplied by the user. Use Python to calculate exact values, then return a final summary. Never access external services or private files.","tools":["python","shell","browser"],"max_steps":4}
+]

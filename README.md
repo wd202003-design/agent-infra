@@ -2,7 +2,7 @@
 
 面向服务器、本机和在线边缘节点的统一 Agent 执行平台。
 
-> 当前状态：项目初始化。仓库包含设计文档与目录骨架，尚无可运行服务；容量指标均为待验证目标，不代表已具备的能力。
+> 当前状态：D1 完整设计基线 + 正式模块首轮实现。已提供 PostgreSQL 控制面、独立 Runner、v1 契约、Web 和有限模型工具循环；真实沙箱/模型及三类节点、容量仍待验收。完整差距见 docs/implementation-status.md。
 
 ## MVP 目标
 
@@ -16,9 +16,17 @@
 
 ## 文档入口
 
+- [完整设计基线 D1](docs/design/README.md)
+
+- [正式模块启动](deploy/platform.md)
+- [实现状态与验证证据](docs/implementation-status.md)
+- [按目录推进的设计需求](docs/requirements.md)
 - [MVP 范围与验收](docs/mvp.md)
 - [架构与可靠性约束](docs/architecture.md)
 - [实施路线](docs/roadmap.md)
+- [启动开发控制台](devserver/README.md)
+- [沙箱 PoC 操作说明](poc/sandbox/README.md)
+- [沙箱验收矩阵](docs/sandbox-poc.md)
 - [架构决策记录](docs/adr/README.md)
 - [贡献规范](CONTRIBUTING.md)
 - [Agent 开发约束](AGENTS.md)
@@ -36,13 +44,13 @@
 | `tests/acceptance/` | 故障、容量及端到端验收 |
 | `docs/` | 需求、架构、路线与决策 |
 
-以上组件目录目前为占位。实现应从单任务闭环开始，见实施路线 M1。
+正式模块位于 control-plane、runner、contracts、web；deploy 和 examples 提供启动与样例。devserver 保留早期开发实现，poc/sandbox 保留独立沙箱验证脚本。
 
 ## 技术决策状态
 
 控制面按模块化服务设计，使用 PostgreSQL 与对象存储作为目标存储方案。
-工作流引擎在 Hatchet / Temporal 中择一；Agent Runtime 和模型网关各选一种。
-语言、版本、本机首个目标操作系统及部署方案由 PoC 和 ADR 确定，当前不预设兼容性承诺。
+完整目标设计见 ADR 0005：Temporal 持久协调、自有有限 JSON Runtime、内置 model-access 网关、S3 API 产物存储。
+OpenSandbox 为首发集成基线，生产启用仍须真实隔离/回收验证；Cube 保留受门槛控制的候选。Python/Linux 沿用 ADR 0004，现有数据库队列向目标协调器的迁移按 D1 推进，未实现部分见状态清单。
 
 ## 获取项目
 
@@ -51,7 +59,9 @@ git clone https://github.com/wd202003-design/agent-infra.git
 cd agent-infra
 ```
 
-当前无服务启动命令。M1 实现时必须补充依赖、配置、启动与验证步骤。
+按 [正式模块启动说明](deploy/platform.md) 启动 http://127.0.0.1:8766。默认 Demo 不执行源码。旧版开发控制台仍可按 devserver/README.md 启动在 8765；两个服务使用不同数据和契约。正式 Runner 暂未开放 Cube 后端。
+
+旧开发版使用 Python/FastAPI/SQLite，范围见 ADR 0002；不作为正式 PostgreSQL 的替代或完整 MVP 验收结果。
 
 ## 许可与凭证
 

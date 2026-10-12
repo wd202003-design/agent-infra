@@ -20,5 +20,9 @@
 
 提交信息可使用 docs:、feat:、fix:、test:、chore: 前缀。
 PR 说明问题、行为变化、验证方法及影响。
-当前无可运行代码或 CI；首次实现时引入与实际技术栈相符的格式、构建和测试检查。
+沙箱 PoC 的本地测试命令见 poc/sandbox/README.md；GitHub Actions 运行 SDK 导入、CLI 和生命周期单元测试。真实沙箱集成必须单独报告，不能用模拟 SDK 测试代替。
 未执行的验证须写明未执行，不声称通过。
+
+开发服务验证：按 devserver/README.md 运行 tests/test_devserver.py。
+
+正式模块验证：按 docs/implementation-status.md 运行 tests/acceptance/test_platform.py；PostgreSQL CI 与本地显式 SQLite 测试分别记录。修改 contracts/models.py 或 API 后运行 `PYTHONPATH=control-plane:. python -m contracts.export`，提交更新的 OpenAPI。

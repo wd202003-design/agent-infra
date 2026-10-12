@@ -1,0 +1,59 @@
+# Integration environment. Freeze image digests before a production release.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_DB: agent
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run deploy/configure.py}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U agent -d agent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: [python, -m, infra_control, migrate]
+    environment:
+      AGENT_DATABASE_URL: postgresql://agent:${POSTGRES_PASSWORD}@db:5432/agent
+    depends_on:
+      db:
+        condition: service_healthy
+  control:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      AGENT_DATABASE_URL: postgresql://agent:${POSTGRES_PASSWORD}@db:5432/agent
+      AGENT_USERS_JSON: ${AGENT_USERS_JSON:?Run deploy/configure.py}
+      AGENT_MODEL_URL: ${AGENT_MODEL_URL:-}
+      AGENT_MODEL_KEY: ${AGENT_MODEL_KEY:-}
+      AGENT_MODEL_NAME: ${AGENT_MODEL_NAME:-}
+    ports: ["127.0.0.1:8766:8766"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  runner:
+    profiles: [runner]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: [python, -m, runner, --data, /data]
+    env_file: ../.local/node.env
+    environment:
+      AGENT_CONTROL_URL: http://control:8766
+    volumes: [runner-data:/data]
+    depends_on: [control]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+volumes:
+  postgres-data:
+  runner-data:

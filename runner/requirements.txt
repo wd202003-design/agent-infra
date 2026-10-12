@@ -1,0 +1,4 @@
+httpx[socks]==0.28.1
+socksio==1.0.0
+pydantic==2.14.0
+opensandbox==1.1.1

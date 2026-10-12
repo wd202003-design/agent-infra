@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agent Infra · 开发控制台</title><link rel="stylesheet" href="/ui.css"></head>
+<body><main><header><small>AGENT INFRA / M1</small><h1>任务执行控制台</h1><p id="mode">连接后显示后端。此版本尚未接入模型循环。</p></header>
+<section class="connect"><label>访问令牌 <input id="token" type="password" autocomplete="off" placeholder="AGENT_INFRA_TOKEN"></label><button id="connect">连接</button><span id="message" role="status"></span></section>
+<div class="grid"><section><h2>提交任务</h2><label>执行类型 <select id="kind"><option value="python">Python</option><option value="shell">Shell</option><option value="browser">浏览器 / Playwright</option></select></label><label>代码或命令 <textarea id="source" rows="15" spellcheck="false">print(sum(range(10)))</textarea></label><label>执行超时（秒） <input id="timeout" type="number" min="1" max="60" value="30"></label><button id="submit" disabled>提交</button><p class="hint">Demo 仅模拟状态，不执行代码。真实后端在独立沙箱执行；当前只面向受信任操作者的测试任务。</p></section>
+<section><h2>最近任务</h2><div id="tasks"></div></section></div>
+<section><h2>任务详情</h2><button id="cancel" disabled>申请取消</button><button id="download" disabled>下载结果 JSON</button><pre id="detail">选择任务查看状态、事件与结果。</pre><p class="hint">取消等待当前调用结束并确认回收；未知结果需核对，不自动重试。</p></section>
+</main><script src="/ui.js" defer></script></body></html>
