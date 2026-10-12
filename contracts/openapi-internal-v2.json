@@ -94,6 +94,54 @@
         "title": "Command",
         "type": "object"
       },
+      "EgressCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "host": {
+            "maxLength": 253,
+            "minLength": 1,
+            "title": "Host",
+            "type": "string"
+          },
+          "request_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "reserve": {
+            "default": false,
+            "title": "Reserve",
+            "type": "boolean"
+          },
+          "token": {
+            "maxLength": 4096,
+            "minLength": 24,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "host",
+          "request_id"
+        ],
+        "title": "EgressCheck",
+        "type": "object"
+      },
+      "EgressPermit": {
+        "additionalProperties": false,
+        "properties": {
+          "remaining_seconds": {
+            "title": "Remaining Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "remaining_seconds"
+        ],
+        "title": "EgressPermit",
+        "type": "object"
+      },
       "Envelope_Command_": {
         "additionalProperties": false,
         "properties": {
@@ -122,6 +170,36 @@
           "request_id"
         ],
         "title": "Envelope[Command]",
+        "type": "object"
+      },
+      "Envelope_EgressPermit_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EgressPermit"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "request_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[EgressPermit]",
         "type": "object"
       },
       "Envelope_Inspection_": {
@@ -262,6 +340,61 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/egress/check": {
+      "post": {
+        "operationId": "egress_check_egress_check_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EgressCheck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_EgressPermit_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Egress Check"
+      }
+    },
     "/task-commands": {
       "post": {
         "operationId": "command_task_commands_post",

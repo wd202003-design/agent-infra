@@ -6,6 +6,7 @@ RUN pip install --no-cache-dir -r /tmp/control-requirements.txt -r /tmp/runner-r
 COPY contracts /app/contracts
 COPY control-plane /app/control-plane
 COPY runner /app/runner
+COPY egress /app/egress
 COPY web /app/web
 ENV PYTHONPATH=/app/control-plane:/app PYTHONUNBUFFERED=1
 RUN useradd --uid 10001 --create-home agent && mkdir /data && chown agent:agent /data

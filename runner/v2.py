@@ -241,7 +241,39 @@ class Runner:
         await self.renew(job)
         if self.backend != "demo" and self.verifier is None:
             raise RuntimeError("Independent host verifier required")
-        if workspace:
+        egress = None
+        if task["policy"]["egress_rules"]:
+            if self.backend == "demo":
+                raise RuntimeError("Egress requires certified backend")
+            grant = await self.client.post(
+                "/runner/attempts/" + job["attempt"]["id"] + "/egress-grant",
+                {"epoch": job["attempt"]["epoch"]},
+            )
+            import ipaddress
+
+            proxy_ip = str(ipaddress.IPv4Address(os.environ["AGENT_EGRESS_PROXY_IP"]))
+            proxy_port = int(os.environ.get("AGENT_EGRESS_PROXY_PORT", "3128"))
+            if not 1 <= proxy_port <= 65535:
+                raise ValueError("Invalid proxy port")
+            proxy = f"http://{proxy_ip}:{proxy_port}"
+            credential_proxy = f"http://agent:{grant['token']}@{proxy_ip}:{proxy_port}"
+            egress = {
+                "AGENT_EGRESS_PROXY": proxy,
+                "AGENT_EGRESS_TOKEN": grant["token"],
+                "HTTPS_PROXY": credential_proxy,
+                "https_proxy": credential_proxy,
+                "NO_PROXY": "",
+                "no_proxy": "",
+                "SSL_CERT_FILE": "/etc/agent-egress/ca.pem",
+                "REQUESTS_CA_BUNDLE": "/etc/agent-egress/ca.pem",
+            }
+        if egress:
+            await backend.create(
+                task["id"] + ":" + job["attempt"]["id"],
+                deadline=task["deadline"],
+                egress=egress,
+            )
+        elif workspace:
             await backend.create(
                 task["id"] + ":" + job["attempt"]["id"],
                 workspace=workspace,
@@ -253,6 +285,8 @@ class Runner:
         self.wal.save(job["journal_key"], job)
         await self.event(job, "sandbox_created", {"sandbox_ref": backend.id})
         if self.backend != "demo":
+            if egress:
+                await self.verifier("network", job)
             proof = await self.verifier("isolation", job)
             await self.client.post(
                 "/runner/attempts/" + job["attempt"]["id"] + "/verify-isolation",
@@ -466,6 +500,7 @@ async def main():
                         "sandbox": job["sandbox_ref"],
                         "workspace_ref": job["task"]["workspace_ref"],
                         "data_class": job["task"]["data_class"],
+                        "egress": bool(job["task"]["policy"]["egress_rules"]),
                     },
                 )
                 response.raise_for_status()

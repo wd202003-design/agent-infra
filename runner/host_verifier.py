@@ -25,15 +25,24 @@ class Inspection(BaseModel):
     epoch: int = Field(ge=1)
     workspace_ref: str | None = None
     data_class: Literal["public", "private", "edge_summary"] = "public"
+    egress: bool = False
     sandbox: str = Field(pattern=r"^[A-Za-z0-9_-]{1,128}$")
 
 
 class Observer:
     def __init__(
-        self, docker, management, sandbox_label, task_label, keys, snapshot_root=None
+        self,
+        docker,
+        management,
+        sandbox_label,
+        task_label,
+        keys,
+        snapshot_root=None,
+        network_guard=None,
     ):
         self.docker, self.management = docker, management
         self.snapshot_root = Path(snapshot_root) if snapshot_root else None
+        self.network_guard = network_guard
         self.sandbox_label, self.task_label, self.keys = sandbox_label, task_label, keys
 
     async def containers(self, ref):
@@ -77,7 +86,7 @@ class Observer:
             return self.keys.sign(
                 "cleanup", base | {"management_absent": True, "host_absent": True}
             )
-        if kind != "isolation" or len(rows) != 1:
+        if kind not in {"isolation", "network"} or len(rows) != 1:
             raise ValueError("unique_container_required")
         container_id = rows[0]["Id"]
         response = await self.docker.get(
@@ -132,6 +141,25 @@ class Observer:
                 ).hexdigest()
         elif mounts or host.get("Binds"):
             raise ValueError("unexpected_host_mount")
+        if payload.egress:
+            if (
+                payload.data_class != "public"
+                or payload.workspace_ref
+                or not self.network_guard
+            ):
+                raise ValueError("egress_not_configured")
+            if kind == "network":
+                await self.network_guard.install(detail)
+            await self.network_guard.verify(detail)
+            # Container replacement/PID changes during inspection invalidate proof.
+            again = await self.docker.get(
+                "/containers/" + quote(container_id, safe="") + "/json"
+            )
+            again.raise_for_status()
+            if again.json() != detail:
+                raise ValueError("container_changed_during_inspection")
+        elif kind == "network":
+            raise ValueError("egress_not_requested")
         if (
             not host.get("ReadonlyRootfs")
             or host.get("Privileged")
@@ -139,7 +167,7 @@ class Observer:
             or host.get("DeviceRequests")
             or host.get("CapAdd")
             or "ALL" not in host.get("CapDrop", [])
-            or host.get("NetworkMode") != "none"
+            or (not payload.egress and host.get("NetworkMode") != "none")
             or host.get("PidMode") == "host"
             or host.get("IpcMode") == "host"
             or host.get("Memory", 0) <= 0
@@ -155,7 +183,11 @@ class Observer:
         return self.keys.sign(
             "isolation",
             base
-            | {"task": payload.task, "isolated": True, "policy": "offline-v2"}
+            | {
+                "task": payload.task,
+                "isolated": True,
+                "policy": "https-egress-v1" if payload.egress else "offline-v2",
+            }
             | data_proof,
         )
 
@@ -169,6 +201,16 @@ def create_app():
         "AGENT_INTERNAL_DEVELOPMENT"
     ):
         raise ValueError("Management API requires TLS")
+    guard = None
+    if os.environ.get("AGENT_EGRESS_PROXY_IP"):
+        from .network_guard import NetworkGuard
+
+        guard = NetworkGuard(
+            os.environ["AGENT_EGRESS_PROXY_IP"],
+            int(os.environ.get("AGENT_EGRESS_PROXY_PORT", "3128")),
+            os.environ["AGENT_EGRESS_MANAGEMENT_CIDR"],
+            int(os.environ.get("AGENT_EGRESS_MANAGEMENT_PORT", "44772")),
+        )
     observer = Observer(
         httpx.AsyncClient(
             transport=httpx.AsyncHTTPTransport(
@@ -187,6 +229,7 @@ def create_app():
         os.environ["AGENT_DOCKER_TASK_LABEL"],
         keys,
         snapshot_root=os.environ.get("AGENT_SNAPSHOT_ROOT"),
+        network_guard=guard,
     )
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
