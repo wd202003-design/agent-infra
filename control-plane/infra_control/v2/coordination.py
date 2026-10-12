@@ -96,6 +96,7 @@ async def dispatch_once(db, client, task_queue):
                 id="task/" + task_id,
                 task_queue=task_queue,
                 id_reuse_policy=WorkflowIDReusePolicy.REJECT_DUPLICATE,
+                rpc_timeout=timedelta(seconds=10),
             )
         except WorkflowAlreadyStartedError:
             pass
@@ -106,7 +107,8 @@ async def dispatch_once(db, client, task_queue):
 
 
 async def run():
-    from temporalio.client import Client
+    from temporalio.client import Client, TLSConfig
+    from pathlib import Path
     from temporalio.worker import Worker
     from ..db import Database
     from .api import configured_platform
@@ -114,22 +116,58 @@ async def run():
 
     db = Database(os.environ["AGENT_DATABASE_URL"])
     p = configured_platform(db)
+    tls = False
+    if os.environ.get("AGENT_TEMPORAL_TLS") == "1":
+        cert = os.environ.get("AGENT_TEMPORAL_CLIENT_CERT")
+        private = os.environ.get("AGENT_TEMPORAL_CLIENT_KEY")
+        ca = os.environ.get("AGENT_TEMPORAL_CA")
+        if bool(cert) != bool(private):
+            raise ValueError(
+                "Temporal client certificate and key must be configured together"
+            )
+        tls = TLSConfig(
+            client_cert=Path(cert).read_bytes() if cert else None,
+            client_private_key=Path(private).read_bytes() if private else None,
+            server_root_ca_cert=Path(ca).read_bytes() if ca else None,
+            verification_server_name=os.environ.get("AGENT_TEMPORAL_SERVER_NAME"),
+        )
+    elif not os.environ.get("AGENT_INTERNAL_DEVELOPMENT"):
+        raise ValueError("Production Temporal connection requires TLS")
     client = await Client.connect(
         os.environ["AGENT_TEMPORAL_ADDRESS"],
         namespace=os.environ.get("AGENT_TEMPORAL_NAMESPACE", "default"),
+        tls=tls,
+        api_key=os.environ.get("AGENT_TEMPORAL_API_KEY"),
     )
     queue = os.environ.get("AGENT_TEMPORAL_QUEUE", "agent-infra-v2")
     async with Worker(
         client, task_queue=queue, workflows=[TaskWorkflow], activities=[coordinate]
     ):
-        while True:
-            try:
-                await dispatch_once(db, client, queue)
-                await asyncio.to_thread(Artifacts(p).sweep)
-            except Exception as exc:
-                # Log type only; URLs/keys and response bodies must not enter logs.
-                print("coordination_retry:" + type(exc).__name__, flush=True)
-            await asyncio.sleep(1)
+
+        async def dispatch_loop():
+            while True:
+                try:
+                    await dispatch_once(db, client, queue)
+                except Exception as exc:
+                    print("coordination_retry:" + type(exc).__name__, flush=True)
+                await asyncio.sleep(1)
+
+        async def maintenance_loop():
+            # Object deletion continues even if Temporal RPCs are unavailable.
+            from .maintenance import retention
+
+            next_retention = 0.0
+            while True:
+                try:
+                    await asyncio.to_thread(Artifacts(p).sweep)
+                    if asyncio.get_running_loop().time() >= next_retention:
+                        await asyncio.to_thread(retention, p)
+                        next_retention = asyncio.get_running_loop().time() + 3600
+                except Exception as exc:
+                    print("maintenance_retry:" + type(exc).__name__, flush=True)
+                await asyncio.sleep(5)
+
+        await asyncio.gather(dispatch_loop(), maintenance_loop())
 
 
 if __name__ == "__main__":

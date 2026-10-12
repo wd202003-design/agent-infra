@@ -942,7 +942,8 @@ class Platform:
                         "owns_slot": False,
                     }
                     task["dispatch_ready"] = False
-                self.event(tx, task, "command." + payload.type)
+                if payload.type != "reconcile":
+                    self.event(tx, task, "command." + payload.type)
                 return {
                     "task_id": task["id"],
                     "state": task["state"],

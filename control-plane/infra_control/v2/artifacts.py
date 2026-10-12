@@ -276,6 +276,39 @@ class Artifacts:
                 },
             )
 
+    def redact(self, tx, task):
+        task_id = task["id"]
+        task["deleted"] = True
+        task["generation"] += 1
+        task["input"] = {}
+        task["result"] = None
+        task["agent"] = {"digest": task["agent"]["digest"]}
+        tx.execute("DELETE FROM v2_events WHERE task_id=?", (task_id,))
+        tx.execute(
+            "DELETE FROM v2_runner_events WHERE attempt_id IN (SELECT id FROM v2_attempts WHERE task_id=?)",
+            (task_id,),
+        )
+        # Strip cached model responses; retain financial evidence only.
+        for row in tx.execute(
+            "SELECT id,body FROM v2_usage WHERE task_id=?", (task_id,)
+        ).fetchall():
+            value = json.loads(row[1])
+            value.pop("response", None)
+            tx.execute("UPDATE v2_usage SET body=? WHERE id=?", (encode(value), row[0]))
+        # Idempotent result capsules may contain task input/result: keep hashes and a tombstone.
+        for scope, idem_key, response in tx.execute(
+            "SELECT scope,key,response FROM v2_idempotency"
+        ).fetchall():
+            if task_id in response:
+                tx.execute(
+                    "UPDATE v2_idempotency SET response=? WHERE scope=? AND key=?",
+                    (
+                        encode({"task_id": task_id, "deleted": True}),
+                        scope,
+                        idem_key,
+                    ),
+                )
+
     def delete_content(self, actor, task_id, payload, key):
         p = self.p
         with p.db.transaction(serialized=False) as tx:
@@ -287,38 +320,7 @@ class Artifacts:
                 p.cas(task, payload.expected_version)
                 if task["state"] not in TERMINAL or p.unresolved(tx, task_id):
                     raise Fault("delete_not_safe")
-                task["deleted"] = True
-                task["generation"] += 1
-                task["input"] = {}
-                task["result"] = None
-                task["agent"] = {"digest": task["agent"]["digest"]}
-                tx.execute("DELETE FROM v2_events WHERE task_id=?", (task_id,))
-                tx.execute(
-                    "DELETE FROM v2_runner_events WHERE attempt_id IN (SELECT id FROM v2_attempts WHERE task_id=?)",
-                    (task_id,),
-                )
-                # Strip cached model responses; retain financial evidence only.
-                for row in tx.execute(
-                    "SELECT id,body FROM v2_usage WHERE task_id=?", (task_id,)
-                ).fetchall():
-                    value = json.loads(row[1])
-                    value.pop("response", None)
-                    tx.execute(
-                        "UPDATE v2_usage SET body=? WHERE id=?", (encode(value), row[0])
-                    )
-                # Idempotent result capsules may contain task input/result: keep hashes and a tombstone.
-                for scope, idem_key, response in tx.execute(
-                    "SELECT scope,key,response FROM v2_idempotency"
-                ).fetchall():
-                    if task_id in response:
-                        tx.execute(
-                            "UPDATE v2_idempotency SET response=? WHERE scope=? AND key=?",
-                            (
-                                encode({"task_id": task_id, "deleted": True}),
-                                scope,
-                                idem_key,
-                            ),
-                        )
+                self.redact(tx, task)
                 tx.execute(
                     "INSERT INTO v2_deletions(task_id,requested,body) VALUES(?,?,?)",
                     (task_id, p.clock(), encode({"deadline": p.clock() + 86400})),

@@ -96,9 +96,7 @@ def restore_fence(platform):
         # Rebuild pending deletions before exposing any restored object references.
         for (task_id,) in tx.execute("SELECT task_id FROM v2_deletions").fetchall():
             task = get_task(tx, task_id)
-            task["deleted"] = True
-            task["input"] = {}
-            task["result"] = None
+            Artifacts(p).redact(tx, task)
             save_task(tx, task)
             tx.execute(
                 "UPDATE v2_deletions SET completed=NULL WHERE task_id=?", (task_id,)

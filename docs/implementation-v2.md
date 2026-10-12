@@ -39,3 +39,7 @@ node --check web/v2.js
 ```
 
 `TEST_DATABASE_URL` 指向 PostgreSQL 时，测试使用独立随机 schema；未设置时 SQLite 仅作显式测试替身。Temporal 测试下载临时 test server，不是生产 Temporal 集群验收。真实 S3 和真实沙箱测试不可用 Mock 的绿色结果替代。
+
+## 本轮验证记录
+
+本地共 59 项测试通过，Temporal 集成测试在本地显式跳过；GitHub CI 另执行真实 Temporal test-server 的 Activity 重试与历史回放。首个提交的 PostgreSQL 与 Temporal CI 已通过；最终结果以 PR 的最新提交 checks 为准。新增恢复测试验证：恢复后的旧用户/节点凭证失效、已删除任务的幂等缓存不重新暴露输入。

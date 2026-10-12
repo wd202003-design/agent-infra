@@ -638,6 +638,118 @@ class V2Tests(unittest.TestCase):
         finally:
             wal.close()
 
+    def test_restore_invalidates_credentials_and_scrubs_recovered_deleted_content(self):
+        from infra_control.v2.maintenance import restore_fence
+        from infra_control.db import encode
+
+        task = self.submit(
+            "restore-secret", input={"secret": "recovered-sensitive-marker"}
+        )
+        self.claim(task)
+        with self.db.transaction(serialized=False) as tx:
+            tx.execute(
+                "INSERT INTO v2_deletions(task_id,requested,body) VALUES(?,?,?)",
+                (task["id"], self.now[0], encode({"deadline": self.now[0] + 86400})),
+            )
+        self.now[0] += 5
+        restore_fence(self.p)
+        with self.assertRaises(Fault):
+            self.p.authenticate(self.token)
+        self.assertEqual(
+            self.http.get("/v2/tasks", headers=self.headers()).status_code, 401
+        )
+        restored = self.p.task(self.alice, task["id"])
+        self.assertEqual(restored["state"], "needs_review")
+        self.assertTrue(restored["deleted"])
+        with self.db.transaction(serialized=False) as tx:
+            self.assertNotIn(
+                "recovered-sensitive-marker",
+                str(tx.execute("SELECT response FROM v2_idempotency").fetchall()),
+            )
+
+    def test_artifact_manifest_complete_and_download_authorization(self):
+        storage = Mock()
+        storage.upload_url.return_value = "https://objects.test/upload"
+        storage.finalize.return_value = "immutable-final-version"
+        storage.download_url.return_value = "https://objects.test/download"
+        self.p.storage = storage
+        artifacts = Artifacts(self.p)
+        job = self.claim(self.submit())
+        digest = hashlib.sha256(b"result").hexdigest()
+        upload = artifacts.create(
+            self.node,
+            job["attempt"]["id"],
+            C.Upload(
+                epoch=1,
+                manifest={
+                    "name": "answer.txt",
+                    "media_type": "text/plain",
+                    "size": 6,
+                    "sha256": digest,
+                },
+            ),
+            uid(),
+        )
+        artifact_id = upload["upload_session"]
+        with self.assertRaises(Fault):
+            artifacts.download(self.alice, artifact_id, C.Download(), uid())
+        with self.assertRaises(Fault):
+            artifacts.complete(
+                self.node,
+                artifact_id,
+                C.Complete(epoch=1, sha256="0" * 64, size=6),
+                uid(),
+            )
+        completed = artifacts.complete(
+            self.node, artifact_id, C.Complete(epoch=1, sha256=digest, size=6), uid()
+        )
+        self.assertEqual(completed["status"], "committed")
+        self.assertNotIn("version_id", completed)
+        with self.assertRaises(Fault):
+            artifacts.download(self.bob, artifact_id, C.Download(), uid())
+        self.assertEqual(
+            artifacts.download(self.alice, artifact_id, C.Download(), uid())["url"],
+            "https://objects.test/download",
+        )
+        self.assertEqual(self.report(job, result_ref=artifact_id)["state"], "succeeded")
+
+    def test_real_step_requires_certified_isolation(self):
+        self.register_node(backend="opensandbox")
+        job = self.claim(self.submit())
+        req = C.Authorize(
+            epoch=1,
+            step_id=uid(),
+            operation_id=uid(),
+            tool="python",
+            args_hash="a" * 64,
+            policy_digest=self.policy["digest"],
+        )
+        with self.assertRaises(Fault):
+            self.p.authorize(self.node, job["attempt"]["id"], req, uid())
+        with self.db.transaction(serialized=False) as tx:
+            attempt = get_attempt(tx, job["attempt"]["id"])
+            attempt["sandbox_ref"] = "sandbox-real"
+            save_attempt(tx, attempt)
+        proof = self.p.verifier_keys.sign(
+            "isolation",
+            {
+                "attempt": attempt["id"],
+                "task": job["task"]["id"],
+                "epoch": 1,
+                "sandbox": "sandbox-real",
+                "isolated": True,
+                "policy": "offline-v2",
+                "observed": self.now[0],
+                "expires": self.now[0] + 30,
+            },
+        )
+        self.p.verify_isolation(
+            self.node, attempt["id"], C.Isolation(epoch=1, proof=proof)
+        )
+        self.assertIn(
+            "capability", self.p.authorize(self.node, attempt["id"], req, uid())
+        )
+
     def test_outbox_unknown_start_reuses_workflow_id(self):
         from infra_control.v2.coordination import dispatch_once
 
