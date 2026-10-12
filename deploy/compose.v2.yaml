@@ -1,0 +1,63 @@
+# Integration override; Temporal is a separately managed durable deployment.
+services:
+  control:
+    environment:
+      AGENT_ENABLE_V2: '1'
+      AGENT_V2_KEY: ${AGENT_V2_KEY:?32-byte base64url key required}
+      AGENT_INTERNAL_TOKEN_SHA256: ${AGENT_INTERNAL_TOKEN_SHA256:?required}
+      AGENT_V2_MODEL_JSON: ${AGENT_V2_MODEL_JSON:-null}
+      AGENT_S3_BUCKET: ${AGENT_S3_BUCKET:-}
+      AGENT_S3_ENDPOINT: ${AGENT_S3_ENDPOINT:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AGENT_VERIFIER_KEY: ${AGENT_VERIFIER_KEY:-}
+  coordinator:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: [python, -m, infra_control.v2.coordination]
+    environment:
+      AGENT_DATABASE_URL: postgresql://agent:${POSTGRES_PASSWORD}@db:5432/agent
+      AGENT_V2_KEY: ${AGENT_V2_KEY:?required}
+      AGENT_CONTROL_URL: ${AGENT_INTERNAL_CONTROL_URL:-http://control:8766}
+      AGENT_INTERNAL_DEVELOPMENT: ${AGENT_INTERNAL_DEVELOPMENT:-}
+      AGENT_INTERNAL_TOKEN: ${AGENT_INTERNAL_TOKEN:?required}
+      AGENT_TEMPORAL_ADDRESS: ${AGENT_TEMPORAL_ADDRESS:?required}
+      AGENT_TEMPORAL_NAMESPACE: ${AGENT_TEMPORAL_NAMESPACE:-default}
+      AGENT_TEMPORAL_TLS: ${AGENT_TEMPORAL_TLS:-1}
+      AGENT_TEMPORAL_CA: ${AGENT_TEMPORAL_CA:-}
+      AGENT_TEMPORAL_CLIENT_CERT: ${AGENT_TEMPORAL_CLIENT_CERT:-}
+      AGENT_TEMPORAL_CLIENT_KEY: ${AGENT_TEMPORAL_CLIENT_KEY:-}
+      AGENT_TEMPORAL_SERVER_NAME: ${AGENT_TEMPORAL_SERVER_NAME:-}
+      AGENT_TEMPORAL_API_KEY: ${AGENT_TEMPORAL_API_KEY:-}
+      AGENT_S3_BUCKET: ${AGENT_S3_BUCKET:-}
+      AGENT_S3_ENDPOINT: ${AGENT_S3_ENDPOINT:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+    depends_on:
+      control:
+        condition: service_started
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  runner-v2:
+    profiles: [runner-v2]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: [python, -m, runner.v2]
+    env_file: ../.local/node-v2.env
+    environment:
+      AGENT_CONTROL_URL: http://control:8766
+      AGENT_RUNNER_STATE: /data/v2
+    volumes: [runner-v2-data:/data]
+    depends_on: [control]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+volumes:
+  runner-v2-data:
