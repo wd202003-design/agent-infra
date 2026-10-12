@@ -86,10 +86,12 @@ class Database:
         migrations = sorted((Path(__file__).resolve().parents[1] / "migrations").glob("*.sql"))
         with self.transaction() as tx:
             for migration in migrations:
+                version=int(migration.name.split("_",1)[0])
+                if version>1 and tx.execute("SELECT version FROM schema_version WHERE version=?",(version,)).fetchone(): continue
                 for statement in migration.read_text().split(";"):
                     if statement.strip():
                         tx.execute(statement)
 
     def ready(self):
         with self.transaction() as tx:
-            return tx.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 2
+            return tx.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 3

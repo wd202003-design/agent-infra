@@ -35,6 +35,7 @@ class Platform:
     def __init__(self, db, keys, *, clock=time.time, storage=None, verifier_keys=None):
         self.db, self.keys, self.clock = db, keys, clock
         self.storage, self.verifier_keys = storage, verifier_keys
+        self.model_config = None
 
     def audit(self, tx, actor, action, target):
         value = {
@@ -49,7 +50,9 @@ class Platform:
             (value["id"], actor, action, self.clock(), encode(value)),
         )
 
-    def idem(self, tx, scope, key, payload, operation, *, secret=False):
+    def idem(
+        self, tx, scope, key, payload, operation, *, secret=False, secret_until=None
+    ):
         if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", key):
             raise Fault("invalid_idempotency_key", 422)
         lock(tx, "idem:" + scope + ":" + key)
@@ -62,17 +65,43 @@ class Platform:
             if row[0] != checksum:
                 raise Fault("idempotency_conflict")
             value = json.loads(row[1])
+            if (
+                isinstance(value, dict)
+                and value.get("deleted")
+                and set(value) == {"task_id", "deleted"}
+            ):
+                raise Fault("content_deleted", 410)
             if secret:
+                if (
+                    value.get("capsule_expires", 0) <= self.clock()
+                    or "capsule" not in value
+                ):
+                    raise Fault("credential_response_expired", 410)
                 value = self.keys.unseal("response", value["capsule"])
                 if value["expires"] <= self.clock():
                     raise Fault("credential_response_expired", 410)
             return value
         value = operation()
-        stored = {"capsule": self.keys.seal("response", value)} if secret else value
+        stored = (
+            {
+                "capsule": self.keys.seal("response", value),
+                "capsule_expires": min(
+                    secret_until if secret_until is not None else value["expires"],
+                    self.clock() + (60 if scope.endswith(":rotate") else 600),
+                ),
+            }
+            if secret
+            else value
+        )
         tx.execute(
             "INSERT INTO v2_idempotency(scope,key,hash,response,created) VALUES(?,?,?,?,?)",
             (scope, key, checksum, encode(stored), self.clock()),
         )
+        if secret:
+            tx.execute(
+                "UPDATE v2_idempotency SET secret_until=? WHERE scope=? AND key=?",
+                (stored["capsule_expires"], scope, key),
+            )
         return value
 
     def event(self, tx, task, kind, payload=None):
@@ -189,11 +218,29 @@ class Platform:
                     raise Fault("policy_forbidden", 403)
                 if object_get(tx, "revoked_policy", policy["digest"]):
                     raise Fault("policy_revoked", 403)
-                # Workspace/edge input never silently falls through to central model/logs.
-                if data["workspace_ref"] is not None or data["data_class"] != "public":
-                    raise Fault("data_path_not_certified", 422)
+                if data["data_class"] != "public":
+                    ref = data["workspace_ref"]
+                    if (
+                        not ref
+                        or ref not in policy["workspace_refs"]
+                        or ref not in actor.get("workspace_refs", [])
+                    ):
+                        raise Fault("workspace_forbidden", 403)
+                    if data["data_class"] == "private" and agent["mode"] != "program":
+                        raise Fault("private_requires_fixed_program", 422)
+                elif data["workspace_ref"] is not None:
+                    raise Fault("public_workspace_forbidden", 422)
+                model_route = None
                 if data["budget"]["mode"] == "hard":
-                    raise Fault("hard_budget_requires_proven_bound", 422)
+                    from .budget import route_snapshot
+
+                    model_route = route_snapshot(self.model_config, self.clock(), True)
+                    if data["budget"]["currency"] != model_route["currency"]:
+                        raise Fault("currency_mismatch", 422)
+                elif self.model_config and agent["mode"] == "agent":
+                    from .budget import route_snapshot
+
+                    model_route = route_snapshot(self.model_config, self.clock())
                 try:
                     jsonschema.Draft202012Validator(agent["input_schema"]).validate(
                         data["input"]
@@ -233,6 +280,7 @@ class Platform:
                     "actual_tokens": 0,
                     "reserved_cost": 0,
                     "actual_cost": 0,
+                    "model_route": model_route,
                 }
                 save_task(tx, task)
                 self.event(tx, task, "submitted")
@@ -275,14 +323,23 @@ class Platform:
         after = (
             self.keys.verify("cursor", cursor, self.clock())
             if cursor
-            else {"last": "", "owner": actor["id"], "kind": "tasks"}
+            else {"last": "", "created": 0, "owner": actor["id"], "kind": "tasks"}
         )
+        if "created" not in after:
+            raise Fault("cursor_expired", 410)
         if after.get("owner") != actor["id"] or after.get("kind") != "tasks":
             raise Fault("invalid_cursor", 422)
         with self.db.transaction(serialized=False) as tx:
             rows = tx.execute(
-                "SELECT body FROM v2_tasks WHERE id>? AND (owner=? OR ?=1) ORDER BY id LIMIT ?",
-                (after["last"], actor["id"], int(actor["role"] == "admin"), limit + 1),
+                "SELECT body FROM v2_tasks WHERE (created>? OR (created=? AND id>?)) AND (owner=? OR ?=1) ORDER BY created,id LIMIT ?",
+                (
+                    after["created"],
+                    after["created"],
+                    after["last"],
+                    actor["id"],
+                    int(actor["role"] == "admin"),
+                    limit + 1,
+                ),
             ).fetchall()
             items = [json.loads(r[0]) for r in rows[:limit]]
         next_cursor = (
@@ -292,6 +349,7 @@ class Platform:
                     "owner": actor["id"],
                     "kind": "tasks",
                     "last": items[-1]["id"],
+                    "created": items[-1]["created"],
                     "expires": self.clock() + 86400,
                 },
             )
@@ -430,6 +488,7 @@ class Platform:
                 payload.model_dump(),
                 apply,
                 secret=True,
+                secret_until=ticket["expires"],
             )
 
     def authenticate(self, token):
@@ -553,6 +612,19 @@ class Platform:
                         and task["owner"] != node["owner"]
                     ):
                         continue
+                    if task["workspace_ref"] and (
+                        task["workspace_ref"] not in node.get("workspace_refs", [])
+                        or node["backend"] == "demo"
+                        or node["owner"] != task["owner"]
+                    ):
+                        continue
+                    if (
+                        task["data_class"] == "edge_summary"
+                        and node["location"] != "edge"
+                    ):
+                        continue
+                    if task["data_class"] == "private" and node["location"] != "local":
+                        continue
                     if object_get(tx, "revoked_policy", task["policy"]["digest"]):
                         continue
                     task["epoch"] += 1
@@ -569,6 +641,7 @@ class Platform:
                         "last_ack": 0,
                         "simulated": node["backend"] == "demo",
                         "backend": node["backend"],
+                        "local_content": task["data_class"] != "public",
                         "unknown_effects": True,
                         "sandbox_ref": "",
                     }
@@ -609,7 +682,7 @@ class Platform:
             raise Fault("execution_not_authorized")
         return task, attempt
 
-    def renew(self, node_id, attempt_id, payload):
+    def renew(self, node_id, attempt_id, payload, key=None):
         with self.db.transaction(serialized=False) as tx:
             self.node(tx, node_id)
             try:
@@ -624,12 +697,21 @@ class Platform:
                     "remaining_seconds": 0,
                     "stop_reason": exc.code,
                 }
-            attempt["lease_until"] = min(self.clock() + 30, task["deadline"])
-            save_attempt(tx, attempt)
-            return {
-                "authorized": True,
-                "remaining_seconds": max(0, attempt["lease_until"] - self.clock()),
-            }
+
+            def apply():
+                attempt["lease_until"] = min(self.clock() + 30, task["deadline"])
+                save_attempt(tx, attempt)
+                return {"lease_until": attempt["lease_until"]}
+
+            grant = self.idem(
+                tx,
+                node_id + ":renew:" + attempt_id,
+                key or uid(),
+                payload.model_dump(),
+                apply,
+            )
+            remaining = max(0, grant["lease_until"] - self.clock())
+            return {"authorized": remaining > 0, "remaining_seconds": remaining}
 
     def authorize(self, node_id, attempt_id, payload, key):
         with self.db.transaction(serialized=False) as tx:
@@ -704,7 +786,22 @@ class Platform:
             )
             for item in payload.events:
                 data = item.model_dump()
+                if task["data_class"] != "public":
+                    from .egress import event_metadata
+
+                    event_metadata(item.type, item.payload)
                 checksum = sha(encode(data))
+                old_id = tx.execute(
+                    "SELECT seq FROM v2_runner_event_ids WHERE attempt_id=? AND event_id=?",
+                    (attempt_id, item.event_id),
+                ).fetchone()
+                if old_id and old_id[0] != item.runner_seq:
+                    raise Fault("event_id_conflict")
+                if not old_id:
+                    tx.execute(
+                        "INSERT INTO v2_runner_event_ids(attempt_id,event_id,seq) VALUES(?,?,?)",
+                        (attempt_id, item.event_id, item.runner_seq),
+                    )
                 old = tx.execute(
                     "SELECT hash FROM v2_runner_events WHERE attempt_id=? AND seq=?",
                     (attempt_id, item.runner_seq),
@@ -822,12 +919,18 @@ class Platform:
                         or artifact[1] != "committed"
                     ):
                         raise Fault("result_not_committed")
+                if task["data_class"] == "private" and (
+                    payload.result_ref
+                    or payload.result not in {"", "PRIVATE_RESULT_RETAINED_LOCALLY"}
+                ):
+                    raise Fault("private_egress_forbidden", 403)
                 task["result"] = {
                     "text": payload.result,
                     "artifact_id": payload.result_ref,
                 }
                 safe = (
-                    clean
+                    not task.get("billing_violation", False)
+                    and clean
                     and not payload.unknown_effects
                     and not self.unresolved(tx, task["id"])
                 )
@@ -974,6 +1077,73 @@ class Platform:
                 and proof["expires"] <= proof["observed"] + 30
             ):
                 raise Fault("isolation_proof_mismatch", 403)
+            if task["workspace_ref"]:
+                if (
+                    proof.get("workspace_ref") != task["workspace_ref"]
+                    or proof.get("data_class") != task["data_class"]
+                ):
+                    raise Fault("workspace_proof_mismatch", 403)
+                if task["data_class"] == "edge_summary" and (
+                    not attempt.get("summary_digest")
+                    or proof.get("summary_digest") != attempt["summary_digest"]
+                ):
+                    raise Fault("summary_proof_mismatch", 403)
             attempt["isolation_verified"] = True
             save_attempt(tx, attempt)
             return {"authorized": True}
+
+    def prepared(self, node_id, attempt_id, payload, key):
+        from .egress import validate_summary
+
+        with self.db.transaction(serialized=False) as tx:
+            self.node(tx, node_id)
+            task, attempt = self.active(tx, node_id, attempt_id, payload.epoch)
+            if task["data_class"] != "edge_summary":
+                raise Fault("summary_not_permitted", 403)
+            value = payload.model_dump()["summary"]
+            validate_summary(value)
+            digest = sha(encode(value))
+
+            def apply():
+                if (
+                    attempt.get("summary_digest")
+                    and attempt["summary_digest"] != digest
+                ):
+                    raise Fault("summary_immutable")
+                attempt["summary_digest"] = digest
+                attempt["approved_summary"] = value
+                save_attempt(tx, attempt)
+                self.event(tx, task, "summary_prepared", {"digest": digest})
+                return {"summary_digest": digest}
+
+            return self.idem(
+                tx, attempt_id + ":prepared", key, payload.model_dump(), apply
+            )
+
+    def pending_local_deletions(self, node_id):
+        with self.db.transaction(serialized=False) as tx:
+            self.node(tx, node_id)
+            rows = tx.execute(
+                "SELECT a.body FROM v2_attempts a JOIN v2_deletions d ON d.task_id=a.task_id LEFT JOIN v2_node_deletions n ON n.attempt_id=a.id WHERE a.node_id=? AND a.local_content=1 AND n.attempt_id IS NULL ORDER BY d.requested,a.id LIMIT 100",
+                (node_id,),
+            ).fetchall()
+            return [
+                {"attempt_id": a["id"]}
+                for row in rows
+                if (a := json.loads(row[0])).get("local_content")
+            ]
+
+    def acknowledge_local_deletion(self, node_id, attempt_id):
+        with self.db.transaction(serialized=False) as tx:
+            self.node(tx, node_id)
+            a = get_attempt(tx, attempt_id)
+            if a["node_id"] != node_id:
+                raise Fault("not_found", 404)
+            task = get_task(tx, a["task_id"])
+            if not task.get("deleted") or a["active"]:
+                raise Fault("delete_not_safe")
+            tx.execute(
+                "INSERT INTO v2_node_deletions(attempt_id,acknowledged) VALUES(?,?) ON CONFLICT(attempt_id) DO NOTHING",
+                (attempt_id, self.clock()),
+            )
+            return {"acknowledged": True}

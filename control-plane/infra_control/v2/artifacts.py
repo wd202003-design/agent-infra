@@ -282,12 +282,22 @@ class Artifacts:
         task["generation"] += 1
         task["input"] = {}
         task["result"] = None
-        task["agent"] = {"digest": task["agent"]["digest"]}
+        if "agent" in task:
+            task["agent"] = {"digest": task["agent"]["digest"]}
+        task.pop("model_route", None)
         tx.execute("DELETE FROM v2_events WHERE task_id=?", (task_id,))
         tx.execute(
             "DELETE FROM v2_runner_events WHERE attempt_id IN (SELECT id FROM v2_attempts WHERE task_id=?)",
             (task_id,),
         )
+        for row in tx.execute(
+            "SELECT id,body FROM v2_attempts WHERE task_id=?", (task_id,)
+        ).fetchall():
+            attempt = json.loads(row[1])
+            attempt.pop("approved_summary", None)
+            tx.execute(
+                "UPDATE v2_attempts SET body=? WHERE id=?", (encode(attempt), row[0])
+            )
         # Strip cached model responses; retain financial evidence only.
         for row in tx.execute(
             "SELECT id,body FROM v2_usage WHERE task_id=?", (task_id,)
@@ -363,8 +373,16 @@ class Artifacts:
                         ("deleted", encode(artifact), artifact["id"]),
                     )
             with p.db.transaction(serialized=False) as tx:
-                tx.execute(
-                    "UPDATE v2_deletions SET completed=? WHERE task_id=?",
-                    (p.clock(), task_id),
-                )
+                pending = [
+                    json.loads(row[0])
+                    for row in tx.execute(
+                        "SELECT a.body FROM v2_attempts a LEFT JOIN v2_node_deletions d ON d.attempt_id=a.id WHERE a.task_id=? AND d.attempt_id IS NULL",
+                        (task_id,),
+                    ).fetchall()
+                ]
+                if not any(a.get("local_content") for a in pending):
+                    tx.execute(
+                        "UPDATE v2_deletions SET completed=? WHERE task_id=?",
+                        (p.clock(), task_id),
+                    )
         return len(jobs)

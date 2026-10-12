@@ -34,7 +34,7 @@ class OpenSandboxBackend:
         if not os.environ.get('OPEN_SANDBOX_IMAGE') or not os.environ.get('OPEN_SANDBOX_API_KEY'):
             raise ValueError('OpenSandbox image and API key are required')
 
-    async def create(self, task_id):
+    async def create(self, task_id, *, workspace=None, deadline=None):
         from opensandbox import Sandbox
         from opensandbox.config import ConnectionConfig
         from opensandbox.models import NetworkPolicy
@@ -45,9 +45,15 @@ class OpenSandboxBackend:
             request_timeout=timedelta(seconds=15), retry_policy=RetryPolicy.disabled(),
             disable_metrics=True,
         )
+        volumes=None
+        if workspace:
+            from opensandbox.models.sandboxes import Volume, Host
+            volumes=[Volume(name="task-input",host=Host(path=workspace),mount_path="/workspace",read_only=True)]
+        import time
+        ttl=min(900,max(1,int(deadline-time.time()+120))) if deadline else 300
         self.sandbox = await Sandbox.create(
             os.environ['OPEN_SANDBOX_IMAGE'], connection_config=cfg,
-            timeout=timedelta(seconds=300), ready_timeout=timedelta(seconds=60),
+            timeout=timedelta(seconds=ttl), volumes=volumes, ready_timeout=timedelta(seconds=60),
             metadata={'project': 'agent-infra', 'task_id': task_id},
             network_policy=NetworkPolicy(default_action='deny', egress=[]),
             resource={'cpu': '1', 'memory': '2Gi'},

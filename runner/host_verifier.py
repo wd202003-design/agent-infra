@@ -9,6 +9,9 @@ import os
 import secrets
 import time
 from urllib.parse import quote
+from pathlib import Path
+import hashlib
+from typing import Literal
 import httpx
 from fastapi import FastAPI, Header
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,12 +23,17 @@ class Inspection(BaseModel):
     attempt: str = Field(pattern=r"^[a-f0-9-]{36}$")
     task: str = Field(pattern=r"^[a-f0-9-]{36}$")
     epoch: int = Field(ge=1)
+    workspace_ref: str | None = None
+    data_class: Literal["public", "private", "edge_summary"] = "public"
     sandbox: str = Field(pattern=r"^[A-Za-z0-9_-]{1,128}$")
 
 
 class Observer:
-    def __init__(self, docker, management, sandbox_label, task_label, keys):
+    def __init__(
+        self, docker, management, sandbox_label, task_label, keys, snapshot_root=None
+    ):
         self.docker, self.management = docker, management
+        self.snapshot_root = Path(snapshot_root) if snapshot_root else None
         self.sandbox_label, self.task_label, self.keys = sandbox_label, task_label, keys
 
     async def containers(self, ref):
@@ -85,11 +93,48 @@ class Observer:
         user = config.get("User", "").split(":")[0]
         if not user.isdecimal() or int(user) == 0:
             raise ValueError("non_root_uid_required")
+        mounts = detail.get("Mounts", [])
+        data_proof = {}
+        if payload.workspace_ref:
+            if not self.snapshot_root or len(mounts) != 1:
+                raise ValueError("workspace_mount_required")
+            expected = self.snapshot_root / payload.attempt
+            mount = mounts[0]
+            if (
+                mount.get("Type") != "bind"
+                or mount.get("RW") is not False
+                or mount.get("Destination") != "/workspace"
+                or Path(mount.get("Source", "")) != expected
+                or expected.resolve() != expected
+                or mount.get("Propagation") not in {"rprivate", "private"}
+            ):
+                raise ValueError("workspace_mount_not_readonly_or_bound")
+            data_proof = {
+                "workspace_ref": payload.workspace_ref,
+                "data_class": payload.data_class,
+            }
+            if payload.data_class == "edge_summary":
+                from .workspaces import walk_files, canonical
+
+                files = list(walk_files(expected))
+                if (
+                    len(files) != 1
+                    or files[0][0] != "summary.json"
+                    or len(files[0][1]) > 8192
+                ):
+                    raise ValueError("summary_only_mount_required")
+                value = json.loads(files[0][1])
+                from infra_control.v2.egress import validate_summary
+
+                validate_summary(value)
+                data_proof["summary_digest"] = hashlib.sha256(
+                    canonical(value).encode()
+                ).hexdigest()
+        elif mounts or host.get("Binds"):
+            raise ValueError("unexpected_host_mount")
         if (
             not host.get("ReadonlyRootfs")
             or host.get("Privileged")
-            or host.get("Binds")
-            or detail.get("Mounts")
             or host.get("Devices")
             or host.get("DeviceRequests")
             or host.get("CapAdd")
@@ -109,7 +154,9 @@ class Observer:
             raise ValueError("host_policy_not_enforced")
         return self.keys.sign(
             "isolation",
-            base | {"task": payload.task, "isolated": True, "policy": "offline-v2"},
+            base
+            | {"task": payload.task, "isolated": True, "policy": "offline-v2"}
+            | data_proof,
         )
 
 
@@ -139,6 +186,7 @@ def create_app():
         os.environ["AGENT_DOCKER_SANDBOX_LABEL"],
         os.environ["AGENT_DOCKER_TASK_LABEL"],
         keys,
+        snapshot_root=os.environ.get("AGENT_SNAPSHOT_ROOT"),
     )
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 

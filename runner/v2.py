@@ -58,7 +58,9 @@ class Client:
             },
         )
         response.raise_for_status()
-        return response.json()["data"]
+        from contracts.wire import convert
+
+        return convert(response.json()["data"], decode=True)
 
     async def close(self):
         await self.http.aclose()
@@ -66,13 +68,22 @@ class Client:
 
 class Runner:
     def __init__(
-        self, client, wal, *, backend="demo", slots=1, factory=None, verifier=None
+        self,
+        client,
+        wal,
+        *,
+        backend="demo",
+        slots=1,
+        factory=None,
+        verifier=None,
+        workspaces=None,
     ):
         if backend not in FACTORIES or not 1 <= slots <= 32:
             raise ValueError("Unsupported backend/slots")
         self.client, self.wal, self.backend, self.slots = client, wal, backend, slots
         self.factory = factory or FACTORIES[backend]
         self.verifier = verifier
+        self.workspaces = workspaces
 
     async def credentials(self):
         credential = self.wal.load("credentials")
@@ -114,6 +125,16 @@ class Runner:
         self.wal.save("credentials", credential)
         self.client.token = credential["node_token"]
         self.wal.remove("registration")
+
+    async def delete_local_content(self):
+        if self.workspaces is None:
+            return
+        jobs = await self.client.post("/runner/deletions", {})
+        for item in jobs:
+            await asyncio.to_thread(
+                self.workspaces.delete_local_content, item["attempt_id"]
+            )
+            await self.client.post("/runner/deletions/ack", item, item["attempt_id"])
 
     async def renew(self, job):
         a = job["attempt"]
@@ -200,12 +221,34 @@ class Runner:
     async def body(self, job, backend):
         task = job["task"]
         agent = task["agent"]
-        if task["data_class"] != "public" or task["workspace_ref"] is not None:
-            raise RuntimeError("Uncertified data path")
+        workspace = None
+        summary = None
+        if task["workspace_ref"]:
+            if self.workspaces is None or self.backend == "demo":
+                raise RuntimeError("Workspace provider required")
+            prepared = await asyncio.to_thread(
+                self.workspaces.prepare, task, job["attempt"]["id"]
+            )
+            workspace = prepared["path"]
+            summary = prepared["summary"]
+            job["workspace_prepared"] = True
+            self.wal.save(job["journal_key"], job)
+            if summary is not None:
+                await self.client.post(
+                    "/runner/attempts/" + job["attempt"]["id"] + "/prepared",
+                    {"epoch": job["attempt"]["epoch"], "summary": summary},
+                )
         await self.renew(job)
         if self.backend != "demo" and self.verifier is None:
             raise RuntimeError("Independent host verifier required")
-        await backend.create(task["id"] + ":" + job["attempt"]["id"])
+        if workspace:
+            await backend.create(
+                task["id"] + ":" + job["attempt"]["id"],
+                workspace=workspace,
+                deadline=task["deadline"],
+            )
+        else:
+            await backend.create(task["id"] + ":" + job["attempt"]["id"])
         job["sandbox_ref"] = backend.id
         self.wal.save(job["journal_key"], job)
         await self.event(job, "sandbox_created", {"sandbox_ref": backend.id})
@@ -223,6 +266,14 @@ class Runner:
                 agent["source"],
                 min(agent["tool_timeout"], task["policy"]["limits"]["tool_timeout"]),
             )
+            if task["data_class"] == "private":
+                self.workspaces.save_private_result(job["attempt"]["id"], result)
+                return (
+                    "succeeded"
+                    if result.get("exit_code") == 0
+                    and not result.get("execution_error")
+                    else "failed"
+                ), "PRIVATE_RESULT_RETAINED_LOCALLY"
             return (
                 "succeeded"
                 if result.get("exit_code") == 0 and not result.get("execution_error")
@@ -230,7 +281,12 @@ class Runner:
             ), canonical(result)
         if self.backend == "demo":
             return "succeeded", "SIMULATED: no code or model executed."
-        messages = [{"role": "user", "content": canonical(task["input"])}]
+        messages = [
+            {
+                "role": "user",
+                "content": canonical(summary if summary is not None else task["input"]),
+            }
+        ]
         for _ in range(agent["max_steps"]):
             await self.renew(job)
             request = {
@@ -316,6 +372,10 @@ class Runner:
                     )
             except Exception:
                 proof = ""
+        if job["task"]["data_class"] == "private":
+            result = "PRIVATE_RESULT_RETAINED_LOCALLY"
+        if proof and job.get("workspace_prepared") and self.workspaces:
+            self.workspaces.remove(job["attempt"]["id"])
         return {
             "epoch": job["attempt"]["epoch"],
             "outcome": outcome,
@@ -358,7 +418,9 @@ class Runner:
                 job["report"] = {
                     "epoch": job["attempt"]["epoch"],
                     "outcome": "needs_review",
-                    "result": "Runner restarted after execution intent; no replay",
+                    "result": ""
+                    if job["task"]["data_class"] == "private"
+                    else "Runner restarted after execution intent; no replay",
                     "sandbox_ref": job.get("sandbox_ref", ""),
                     "stop_evidence_ref": "",
                     "cleanup_evidence_ref": "",
@@ -402,17 +464,28 @@ async def main():
                         "task": job["task"]["id"],
                         "epoch": job["attempt"]["epoch"],
                         "sandbox": job["sandbox_ref"],
+                        "workspace_ref": job["task"]["workspace_ref"],
+                        "data_class": job["task"]["data_class"],
                     },
                 )
                 response.raise_for_status()
                 return response.json()["proof"]
 
+    workspaces = None
+    if os.environ.get("AGENT_WORKSPACES_JSON"):
+        from .workspaces import Workspaces
+
+        workspaces = Workspaces(
+            json.loads(os.environ["AGENT_WORKSPACES_JSON"]),
+            os.environ["AGENT_SNAPSHOT_ROOT"],
+        )
     runner = Runner(
         client,
         wal,
         backend=os.environ.get("AGENT_BACKEND", "demo"),
         slots=int(os.environ.get("AGENT_RUNNER_SLOTS", "1")),
         verifier=verifier,
+        workspaces=workspaces,
     )
     try:
         await runner.credentials()
@@ -430,6 +503,7 @@ async def main():
                 await asyncio.sleep(30)
                 try:
                     await runner.credentials()
+                    await runner.delete_local_content()
                     wal.prune()
                 except Exception as exc:
                     print("credential_retry:" + type(exc).__name__, flush=True)

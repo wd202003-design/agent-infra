@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id);
-let token='', me=null, agents=[], current=null, next=null;
+let token='', me=null, agents=[], policies=[], current=null, next=null;
 const pending=new Map();
 const text=(id,value)=>{$(id).textContent=typeof value==='string'?value:JSON.stringify(value,null,2);};
 async function api(path,method='GET',body){
@@ -40,8 +40,19 @@ async function selectTask(id){
     const a=document.createElement('a');a.href=url.href;a.rel='noopener noreferrer';a.textContent='下载（60 秒有效）';a.target='_blank';$('artifacts').append(a);
   }));}
 }
-async function loadVersions(){agents=(await api('/agents')).data;$('agent').replaceChildren();for(const a of agents)option($('agent'),a.id+':'+a.version,a.id+' / '+a.version);}
-function submission(){const agent=agents.find(a=>a.id+':'+a.version===$('agent').value);if(!agent)throw new Error('请先发布 Agent 版本');return {agent_ref:{id:agent.id,version:agent.version},policy_ref:agent.policy_ref,pool:$('pool').value,input:JSON.parse($('input').value),budget:{token_limit:Number($('tokens').value),cost_limit:Number($('cost').value),currency:'USD',mode:'soft'}};}
+async function loadVersions(){agents=(await api('/agents')).data;policies=(await api('/policies')).data;$('agent').replaceChildren();for(const a of agents)option($('agent'),a.id+':'+a.version,a.id+' / '+a.version);updateDataOptions();}
+function updateDataOptions(){
+  const agent=agents.find(a=>a.id+':'+a.version===$('agent').value);
+  const policy=policies.find(p=>p.id===agent?.policy_ref.id&&p.version===agent?.policy_ref.version);
+  $('data-class').replaceChildren();
+  const labels={public:'公开数据',private:'私有固定分析',edge_summary:'边缘批准摘要'};
+  for(const kind of policy?.data_classes||['public'])if(kind!=='private'||agent?.mode==='program')option($('data-class'),kind,labels[kind]);
+  $('workspace').replaceChildren();option($('workspace'),'','不使用工作区');
+  for(const ref of me?.workspace_refs||[])if(policy?.workspace_refs.includes(ref))option($('workspace'),ref,ref);
+  const hard=$('budget-mode').querySelector('option[value="hard"]');hard.disabled=!me?.capabilities.hard_budget;
+}
+$('agent').onchange=updateDataOptions;
+function submission(){const agent=agents.find(a=>a.id+':'+a.version===$('agent').value);if(!agent)throw new Error('请先发布 Agent 版本');return {agent_ref:{id:agent.id,version:agent.version},policy_ref:agent.policy_ref,pool:$('pool').value,data_class:$('data-class').value,workspace_ref:$('data-class').value==='public'?null:($('workspace').value||null),input:JSON.parse($('input').value),budget:{token_limit:Number($('tokens').value),cost_limit:Number($('cost').value),currency:$('currency').value,mode:$('budget-mode').value}};}
 async function adminData(){
   if(me.role!=='admin')return;
   $('nodes').replaceChildren();for(const node of (await api('/nodes')).data){const row=document.createElement('div');row.className='node-row';const label=document.createElement('span');label.textContent=`${node.id} · ${node.backend} · ${node.revoked?'已撤销':node.draining?'排空中':'可领取'}`;row.append(label);if(!node.revoked)row.append(button(node.draining?'恢复领取':'排空',async()=>{await api('/nodes/'+node.id,'PATCH',{expected_version:node.state_version,draining:!node.draining});await adminData();}),button('撤销凭证',async()=>{await api('/nodes/'+node.id+'/revoke','POST',{reason:'admin_console'});await adminData();}));$('nodes').append(row);}

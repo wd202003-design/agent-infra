@@ -33,7 +33,7 @@ class BodyLimit:
                 return
             data.extend(message.get("body", b""))
             if len(data) > (262144 if scope.get("path", "").startswith(("/v2/", "/internal/v2/")) else 131072):
-                return await JSONResponse({"code": "body_too_large"}, 413)(scope, receive, send)
+                return await JSONResponse({"code": "body_too_large", "message":"body_too_large", "request_id":scope.get("state",{}).get("request_id","")}, 413)(scope, receive, send)
             if not message.get("more_body", False):
                 break
         delivered = False

@@ -79,6 +79,7 @@ class Review(CAS):
 
 
 class NodePolicy(Contract):
+    workspace_refs: list[Name] = Field(default_factory=list, max_length=32)
     pool: Name
     owner: str = Field(min_length=1, max_length=64)
     location: Literal["server", "local", "edge"] = "server"
@@ -213,3 +214,22 @@ class Command(Contract):
 
 class Isolation(Epoch):
     proof: str = Field(max_length=4096)
+
+
+class Aggregate(Contract):
+    count: int = Field(ge=10, le=10000000)
+    min: float
+    max: float
+    mean: float
+
+
+class Prepared(Epoch):
+    summary: dict[Name, Aggregate] = Field(min_length=1, max_length=16)
+
+
+class Empty(Contract):
+    pass
+
+
+class LocalDeletion(Contract):
+    attempt_id: ID

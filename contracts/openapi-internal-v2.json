@@ -1,7 +1,7 @@
 {
   "components": {
     "schemas": {
-      "Command": {
+      "Command-Input": {
         "additionalProperties": false,
         "properties": {
           "command_id": {
@@ -58,6 +58,102 @@
         "title": "Command",
         "type": "object"
       },
+      "Command-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "deadline": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+            "title": "Deadline",
+            "type": "string"
+          },
+          "epoch": {
+            "title": "Epoch",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "state_version": {
+            "title": "State Version",
+            "type": "integer"
+          },
+          "task_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id",
+          "state",
+          "state_version",
+          "epoch",
+          "deadline"
+        ],
+        "title": "Command",
+        "type": "object"
+      },
+      "Envelope_Command_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Command-Output"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "request_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[Command]",
+        "type": "object"
+      },
+      "Envelope_Inspection_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Inspection"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "request_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[Inspection]",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -69,6 +165,47 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Inspection": {
+        "additionalProperties": false,
+        "properties": {
+          "deadline": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+            "title": "Deadline",
+            "type": "string"
+          },
+          "dispatch_ready": {
+            "title": "Dispatch Ready",
+            "type": "boolean"
+          },
+          "epoch": {
+            "title": "Epoch",
+            "type": "integer"
+          },
+          "id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "state_version": {
+            "title": "State Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "state_version",
+          "epoch",
+          "deadline",
+          "dispatch_ready"
+        ],
+        "title": "Inspection",
         "type": "object"
       },
       "ValidationError": {
@@ -144,7 +281,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Command"
+                "$ref": "#/components/schemas/Command-Input"
               }
             }
           },
@@ -154,7 +291,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_Command_"
+                }
               }
             },
             "description": "Successful Response"
@@ -207,7 +346,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_Inspection_"
+                }
               }
             },
             "description": "Successful Response"

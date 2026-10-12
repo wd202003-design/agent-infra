@@ -9,6 +9,20 @@ from .artifacts import Artifacts
 from .service import TERMINAL
 
 
+def expire_capsules(platform, tx=None):
+    if tx is None:
+        with platform.db.transaction(serialized=False) as transaction:
+            return expire_capsules(platform, transaction)
+    for scope, key in tx.execute(
+        "SELECT scope,key FROM v2_idempotency WHERE secret_until<=?",
+        (platform.clock(),),
+    ).fetchall():
+        tx.execute(
+            "UPDATE v2_idempotency SET response=?,secret_until=NULL WHERE scope=? AND key=?",
+            (encode({"expired": True}), scope, key),
+        )
+
+
 def retention(platform):
     p = platform
     now = p.clock()
@@ -35,11 +49,54 @@ def retention(platform):
         tx.execute("DELETE FROM v2_audit WHERE created<?", (now - 365 * 86400,))
         tx.execute("DELETE FROM v2_idempotency WHERE created<?", (now - 90 * 86400,))
         tx.execute("DELETE FROM v2_credentials WHERE expires<?", (now,))
+        tx.execute("DELETE FROM v2_http_keys WHERE created<?", (now - 90 * 86400,))
+        expire_capsules(p, tx)
+        # Keep unknown money and active resources regardless of age.
+        for request_id, task_id in tx.execute(
+            "SELECT u.id,u.task_id FROM v2_usage u JOIN v2_tasks t ON t.id=u.task_id WHERE u.created<? AND u.status IN ('complete','unexecuted','reconciled') AND t.state IN ('succeeded','failed','cancelled')",
+            (now - 365 * 86400,),
+        ).fetchall():
+            get_task(tx, task_id)
+            tx.execute("DELETE FROM v2_ledger WHERE request_id=?", (request_id,))
+            tx.execute("DELETE FROM v2_usage WHERE id=?", (request_id,))
+        for (task_id,) in tx.execute(
+            "SELECT id FROM v2_tasks WHERE archived=0 AND created<? AND state IN ('succeeded','failed','cancelled') ORDER BY created LIMIT 100",
+            (now - 90 * 86400,),
+        ).fetchall():
+            task = get_task(tx, task_id)
+            if task.get("tombstone") or p.unresolved(tx, task_id):
+                continue
+            Artifacts(p).redact(tx, task)
+            keep = {
+                key: task[key]
+                for key in (
+                    "id",
+                    "owner",
+                    "pool",
+                    "state",
+                    "state_version",
+                    "epoch",
+                    "sequence",
+                    "created",
+                    "created_at",
+                    "deadline",
+                    "generation",
+                )
+            }
+            keep.update(
+                tombstone=True, deleted=True, dispatch_ready=False, active_attempt=None
+            )
+            save_task(tx, keep)
+            tx.execute(
+                "INSERT INTO v2_deletions(task_id,requested,body) VALUES(?,?,?) ON CONFLICT(task_id) DO NOTHING",
+                (task_id, now, encode({"deadline": now + 86400})),
+            )
+
         stale = [
             json.loads(row[0])
             for row in tx.execute(
-                "SELECT body FROM v2_artifacts WHERE created<? AND status!='deleted' LIMIT 100",
-                (now - 30 * 86400,),
+                "SELECT body FROM v2_artifacts WHERE (created<? OR (created<? AND status IN ('staging','verifying'))) AND status!='deleted' LIMIT 100",
+                (now - 30 * 86400, now - 86400),
             ).fetchall()
         ]
     for artifact in stale:

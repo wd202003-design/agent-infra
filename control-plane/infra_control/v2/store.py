@@ -43,7 +43,7 @@ def get_task(tx, task_id, actor=None, locked=True):
 
 def save_task(tx, task):
     tx.execute(
-        "INSERT INTO v2_tasks(id,owner,pool,state,ready,created,deadline,version,body) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,ready=excluded.ready,version=excluded.version,body=excluded.body",
+        "INSERT INTO v2_tasks(id,owner,pool,state,ready,created,deadline,version,body,archived) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,ready=excluded.ready,version=excluded.version,body=excluded.body,archived=excluded.archived",
         (
             task["id"],
             task["owner"],
@@ -54,6 +54,7 @@ def save_task(tx, task):
             task["deadline"],
             task["state_version"],
             encode(task),
+            int(task.get("tombstone", False)),
         ),
     )
 
@@ -69,7 +70,7 @@ def get_attempt(tx, attempt_id):
 
 def save_attempt(tx, attempt):
     tx.execute(
-        "INSERT INTO v2_attempts(id,task_id,node_id,slot,active,epoch,body) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET active=excluded.active,body=excluded.body",
+        "INSERT INTO v2_attempts(id,task_id,node_id,slot,active,epoch,body,local_content) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET active=excluded.active,body=excluded.body",
         (
             attempt["id"],
             attempt["task_id"],
@@ -78,5 +79,6 @@ def save_attempt(tx, attempt):
             int(attempt["active"]),
             attempt["epoch"],
             encode(attempt),
+            int(attempt.get("local_content", False)),
         ),
     )

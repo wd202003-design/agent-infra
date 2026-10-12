@@ -8,12 +8,14 @@ from ..db import encode
 from ..service import Fault
 from .security import sha
 from .service import uid
-from .store import lock, get_task
+from .store import lock, get_task, object_get, object_put
+from .budget import request_body, reserve_bound
 
 
 class ModelGateway:
     def __init__(self, platform, config, *, transport=None):
         self.p, self.config, self.transport = platform, config, transport
+        platform.model_config = config
         if config:
             required = {
                 "url",
@@ -73,11 +75,19 @@ class ModelGateway:
             if payload.budget_ref != task["id"]:
                 raise Fault("budget_ref_mismatch", 422)
             if (
-                task["data_class"] != "public"
+                task["data_class"] == "private"
                 or attempt["simulated"]
                 or task["agent"]["mode"] != "agent"
             ):
                 raise Fault("model_forbidden", 403)
+            if task["data_class"] == "edge_summary":
+                summary = attempt.get("approved_summary")
+                if (
+                    not summary
+                    or payload.messages[0].role != "user"
+                    or payload.messages[0].content != encode(summary)
+                ):
+                    raise Fault("summary_context_mismatch", 403)
             lock(tx, "quota:" + cfg["quota_pool_id"])
             old = tx.execute(
                 "SELECT body FROM v2_usage WHERE id=?", (payload.request_id,)
@@ -100,19 +110,12 @@ class ModelGateway:
             ).fetchone()[0]
             if count >= task["agent"]["max_steps"]:
                 raise Fault("model_step_limit", 429)
-            # Byte-based estimate is a SOFT budget, never represented as a hard token bound.
-            estimate = (
-                len(
-                    encode(
-                        payload.messages and [m.model_dump() for m in payload.messages]
-                    ).encode()
-                )
-                + len(task["agent"]["instruction"].encode())
-                + 2048
-                + task["agent"]["max_output_tokens"]
+            input_bound, output_bound, cost, route = reserve_bound(
+                task, payload, cfg, p.clock()
             )
-            price = max(cfg["input_micro_per_million"], cfg["output_micro_per_million"])
-            cost = (estimate * price + 999999) // 1000000
+            if object_get(tx, "blocked_model_route", route["digest"]):
+                raise Fault("billing_route_quarantined", 503)
+            estimate = input_bound + output_bound
             if (
                 task["reserved_tokens"] + task["actual_tokens"] + estimate
                 > task["budget"]["token_limit"]
@@ -152,6 +155,10 @@ class ModelGateway:
                 "price_version": cfg["price_version"],
                 "currency": cfg["currency"],
                 "reserved_tokens": estimate,
+                "input_bound": input_bound,
+                "output_bound": output_bound,
+                "hard": task["budget"]["mode"] == "hard",
+                "route_digest": route["digest"],
                 "reserved_cost": cost,
                 "status": "pending",
                 "created": p.clock(),
@@ -213,6 +220,25 @@ class ModelGateway:
                     -call["reserved_cost"],
                 )
                 self.ledger(tx, call, "charge", actual, cost)
+                if call.get("hard") and (
+                    response
+                    and (
+                        response.get("input_tokens", 0) > call["input_bound"]
+                        or response.get("output_tokens", 0) > call["output_bound"]
+                        or cost > call["reserved_cost"]
+                    )
+                ):
+                    call["bound_violation"] = True
+                    task["billing_violation"] = True
+                    task["state"] = "needs_review"
+                    object_put(
+                        tx,
+                        "blocked_model_route",
+                        call["route_digest"],
+                        {"request_id": call["id"]},
+                    )
+                    self.ledger(tx, call, "bound_violation", 0, 0)
+
             call["version"] += 1
             tx.execute(
                 "UPDATE v2_usage SET status=?,body=? WHERE id=?",
@@ -227,19 +253,7 @@ class ModelGateway:
         if not fresh:
             return call["response"]
         cfg = self.config
-        system = (
-            'Return exactly one JSON object {"action":"python|shell|browser|final","content":"..."}. Allowed tools: '
-            + ",".join(task["agent"]["tools"])
-            + ".\n"
-            + task["agent"]["instruction"]
-        )
-        request = {
-            "model": cfg["model"],
-            "messages": [{"role": "system", "content": system}]
-            + [m.model_dump() for m in payload.messages],
-            "max_tokens": task["agent"]["max_output_tokens"],
-            "stream": False,
-        }
+        request = request_body(task, payload, cfg)
         proven_unexecuted = False
         try:
             async with (
@@ -302,6 +316,8 @@ class ModelGateway:
                     answer = {
                         "content": text,
                         "usage_tokens": i + o,
+                        "input_tokens": i,
+                        "output_tokens": o,
                         "cost": (
                             i * call["input_price"] + o * call["output_price"] + 999999
                         )

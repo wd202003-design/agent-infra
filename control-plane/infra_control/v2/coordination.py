@@ -154,11 +154,12 @@ async def run():
 
         async def maintenance_loop():
             # Object deletion continues even if Temporal RPCs are unavailable.
-            from .maintenance import retention
+            from .maintenance import retention, expire_capsules
 
             next_retention = 0.0
             while True:
                 try:
+                    await asyncio.to_thread(expire_capsules, p)
                     await asyncio.to_thread(Artifacts(p).sweep)
                     if asyncio.get_running_loop().time() >= next_retention:
                         await asyncio.to_thread(retention, p)
