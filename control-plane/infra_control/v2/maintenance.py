@@ -75,7 +75,8 @@ def restore_fence(platform):
         tx.execute("DELETE FROM v2_credentials")
         tx.execute("DELETE FROM v2_objects WHERE kind='ticket'")
         tx.execute(
-            "DELETE FROM v2_idempotency WHERE scope LIKE 'register:%' OR scope LIKE '%:rotate' OR scope LIKE '%:ticket'"
+            "DELETE FROM v2_idempotency WHERE scope LIKE ? OR scope LIKE ? OR scope LIKE ?",
+            ("register:%", "%:rotate", "%:ticket"),
         )
         for row in tx.execute(
             "SELECT id,body FROM v2_objects WHERE kind='node'"
