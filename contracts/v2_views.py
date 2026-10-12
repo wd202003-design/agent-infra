@@ -316,3 +316,11 @@ class Inspection(Contract):
     epoch: int
     deadline: Timestamp
     dispatch_ready: bool
+
+
+class EgressGrant(Contract):
+    token: str
+
+
+class EgressPermit(Contract):
+    remaining_seconds: float

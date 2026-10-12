@@ -919,6 +919,20 @@
         "title": "Download",
         "type": "object"
       },
+      "EgressGrant": {
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "EgressGrant",
+        "type": "object"
+      },
       "Empty": {
         "additionalProperties": false,
         "properties": {},
@@ -1163,6 +1177,36 @@
           "request_id"
         ],
         "title": "Envelope[Download]",
+        "type": "object"
+      },
+      "Envelope_EgressGrant_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EgressGrant"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "request_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "Envelope[EgressGrant]",
         "type": "object"
       },
       "Envelope_LocalAck_": {
@@ -1939,6 +1983,21 @@
         "title": "Envelope[list[Union[Task, Tombstone]]]",
         "type": "object"
       },
+      "Epoch": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "minimum": 1.0,
+            "title": "Epoch",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch"
+        ],
+        "title": "Epoch",
+        "type": "object"
+      },
       "Error": {
         "additionalProperties": false,
         "properties": {
@@ -2528,6 +2587,11 @@
             "title": "Draining",
             "type": "boolean"
           },
+          "egress_enabled": {
+            "default": false,
+            "title": "Egress Enabled",
+            "type": "boolean"
+          },
           "id": {
             "pattern": "^[a-f0-9-]{36}$",
             "title": "Id",
@@ -2656,6 +2720,11 @@
             "title": "Capabilities",
             "type": "array"
           },
+          "egress_enabled": {
+            "default": false,
+            "title": "Egress Enabled",
+            "type": "boolean"
+          },
           "location": {
             "default": "server",
             "enum": [
@@ -2737,7 +2806,7 @@
             "items": {
               "type": "string"
             },
-            "maxItems": 0,
+            "maxItems": 32,
             "title": "Egress Rules",
             "type": "array"
           },
@@ -2845,7 +2914,7 @@
             "items": {
               "type": "string"
             },
-            "maxItems": 0,
+            "maxItems": 32,
             "title": "Egress Rules",
             "type": "array"
           },
@@ -6356,6 +6425,161 @@
           }
         ],
         "summary": "Authorize"
+      }
+    },
+    "/runner/attempts/{attempt_id}/egress-grant": {
+      "post": {
+        "operationId": "egress_grant_runner_attempts__attempt_id__egress_grant_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Epoch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_EgressGrant_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Egress Grant"
       }
     },
     "/runner/attempts/{attempt_id}/events": {

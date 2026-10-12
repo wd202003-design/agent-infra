@@ -687,6 +687,30 @@ def create_api(
     ):
         return result(request, p.report(n, attempt_id, payload, k))
 
+    @app.post(
+        "/runner/attempts/{attempt_id}/egress-grant",
+        response_model=V.Envelope[V.EgressGrant],
+    )
+    def egress_grant(
+        attempt_id: C.ID,
+        payload: C.Epoch,
+        request: Request,
+        n=Depends(node),
+        k=Depends(key),
+    ):
+        return result(request, p.egress_grant(n, attempt_id, payload))
+
+    def egress_service(token=Depends(bearer)):
+        expected = os.environ.get("AGENT_EGRESS_SERVICE_TOKEN_SHA256", "")
+        if not expected or not secrets.compare_digest(sha(token), expected):
+            raise Fault("egress_service_identity_required", 401)
+
+    @internal.post("/egress/check", response_model=V.Envelope[V.EgressPermit])
+    def egress_check(
+        payload: C.EgressCheck, request: Request, s=Depends(egress_service)
+    ):
+        return result(request, p.egress_check(payload))
+
     @internal.post("/task-commands", response_model=V.Envelope[V.Command])
     def command(payload: C.Command, request: Request, s=Depends(service)):
         return result(request, p.command(payload))

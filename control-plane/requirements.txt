@@ -9,3 +9,5 @@ temporalio==1.34.0
 boto3==1.43.111
 cryptography==50.0.2
 jsonschema==4.26.0
+
+h11==0.16.0

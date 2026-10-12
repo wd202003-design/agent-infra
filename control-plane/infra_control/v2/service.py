@@ -218,6 +218,8 @@ class Platform:
                     raise Fault("policy_forbidden", 403)
                 if object_get(tx, "revoked_policy", policy["digest"]):
                     raise Fault("policy_revoked", 403)
+                if policy["egress_rules"] and data["data_class"] != "public":
+                    raise Fault("egress_requires_public_data", 422)
                 if data["data_class"] != "public":
                     ref = data["workspace_ref"]
                     if (
@@ -605,6 +607,11 @@ class Platform:
                 ).fetchall()
                 for row in rows:
                     task = json.loads(row[0])
+                    if task["policy"]["egress_rules"] and (
+                        not node.get("egress_enabled")
+                        or node["backend"] != "opensandbox"
+                    ):
+                        continue
                     if not set(task["agent"]["tools"]) <= set(node["capabilities"]):
                         continue
                     if (
@@ -1021,6 +1028,7 @@ class Platform:
                         or attempt["stop_status"] != "confirmed"
                         or attempt["cleanup_status"] != "confirmed"
                         or attempt["unknown_effects"]
+                        or bool(task["policy"]["egress_rules"])
                         or task["agent"]["side_effect_class"]
                         not in {"pure", "read_only"}
                         or self.unresolved(tx, task["id"])
@@ -1072,7 +1080,12 @@ class Platform:
                 and proof.get("sandbox") == attempt["sandbox_ref"]
                 and proof.get("epoch") == payload.epoch
                 and proof.get("isolated") is True
-                and proof.get("policy") == "offline-v2"
+                and proof.get("policy")
+                == (
+                    "https-egress-v1"
+                    if task["policy"]["egress_rules"]
+                    else "offline-v2"
+                )
                 and 0 <= self.clock() - proof.get("observed", 0) <= 30
                 and proof["expires"] <= proof["observed"] + 30
             ):
@@ -1147,3 +1160,69 @@ class Platform:
                 (attempt_id, self.clock()),
             )
             return {"acknowledged": True}
+
+    def egress_grant(self, node_id, attempt_id, payload):
+        with self.db.transaction(serialized=False) as tx:
+            node = self.node(tx, node_id)
+            task, attempt = self.active(tx, node_id, attempt_id, payload.epoch)
+            if (
+                not node.get("egress_enabled")
+                or node["backend"] != "opensandbox"
+                or task["data_class"] != "public"
+                or not task["policy"]["egress_rules"]
+            ):
+                raise Fault("egress_forbidden", 403)
+            return {
+                "token": self.keys.sign(
+                    "egress",
+                    {
+                        "node": node_id,
+                        "attempt": attempt_id,
+                        "epoch": payload.epoch,
+                        "policy": task["policy"]["digest"],
+                        "expires": task["deadline"],
+                    },
+                )
+            }
+
+    def egress_check(self, payload):
+        from egress.policy import domain
+
+        try:
+            host = domain(payload.host)
+        except ValueError:
+            raise Fault("egress_host_forbidden", 403) from None
+        grant = self.keys.verify("egress", payload.token, self.clock())
+        with self.db.transaction(serialized=False) as tx:
+            node = self.node(tx, grant["node"])
+            task, attempt = self.active(
+                tx, grant["node"], grant["attempt"], grant["epoch"]
+            )
+            if (
+                not node.get("egress_enabled")
+                or not attempt.get("isolation_verified")
+                or task["data_class"] != "public"
+                or grant["policy"] != task["policy"]["digest"]
+                or host not in task["policy"]["egress_rules"]
+                or object_get(tx, "revoked_policy", grant["policy"])
+            ):
+                raise Fault("egress_forbidden", 403)
+            # Durable request count, never refunded on uncertain transport outcome.
+            usage = object_get(tx, "egress_usage", attempt["id"]) or {"requests": {}}
+            existing = usage["requests"].get(payload.request_id)
+            if existing and existing != host:
+                raise Fault("egress_request_conflict")
+            if payload.reserve and not existing:
+                if len(usage["requests"]) >= 128:
+                    raise Fault("egress_request_limit", 429)
+                usage["requests"][payload.request_id] = host
+                object_put(tx, "egress_usage", attempt["id"], usage)
+            elif not payload.reserve and not existing:
+                raise Fault("egress_request_unreserved", 403)
+            return {
+                "remaining_seconds": min(
+                    15,
+                    attempt["lease_until"] - self.clock(),
+                    task["deadline"] - self.clock(),
+                )
+            }

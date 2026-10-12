@@ -1,7 +1,7 @@
 """D1 protocol 2.0. Independent from frozen v1 contracts."""
 
 from typing import Annotated, Any, Literal
-from pydantic import Field
+from pydantic import Field, field_validator
 from .models import Contract, Agent, Message
 
 Name = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_-]{0,63}$")]
@@ -30,7 +30,17 @@ class PolicyVersion(Contract):
     tool_kinds: list[Literal["python", "shell", "browser"]] = Field(
         min_length=1, max_length=3
     )
-    egress_rules: list[str] = Field(default_factory=list, max_length=0)
+    egress_rules: list[str] = Field(default_factory=list, max_length=32)
+
+    @field_validator("egress_rules")
+    @classmethod
+    def exact_domains(cls, value):
+        from egress.policy import domain
+
+        if len(set(value)) != len(value):
+            raise ValueError("duplicate_domain")
+        return [domain(host) for host in value]
+
     data_classes: list[Literal["public", "private", "edge_summary"]] = Field(
         default_factory=lambda: ["public"], min_length=1, max_length=3
     )
@@ -79,6 +89,7 @@ class Review(CAS):
 
 
 class NodePolicy(Contract):
+    egress_enabled: bool = False
     workspace_refs: list[Name] = Field(default_factory=list, max_length=32)
     pool: Name
     owner: str = Field(min_length=1, max_length=64)
@@ -233,3 +244,10 @@ class Empty(Contract):
 
 class LocalDeletion(Contract):
     attempt_id: ID
+
+
+class EgressCheck(Contract):
+    token: str = Field(min_length=24, max_length=4096)
+    host: str = Field(min_length=1, max_length=253)
+    request_id: ID
+    reserve: bool = False
