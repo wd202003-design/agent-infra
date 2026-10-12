@@ -4,3 +4,8 @@ httpx[socks]==0.28.1
 socksio==1.0.0
 pydantic==2.14.0
 psycopg[binary]==3.2.13
+
+temporalio==1.34.0
+boto3==1.43.111
+cryptography==50.0.2
+jsonschema==4.26.0

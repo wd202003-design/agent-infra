@@ -25,10 +25,25 @@ jobs:
           PYTHONPATH: control-plane:.
           TEST_DATABASE_URL: postgresql://test:test-only-password@localhost:5432/agent_test
         run: python -m unittest discover -s tests/acceptance -p 'test_*.py' -v
-      - run: node --check web/app.js
+      - run: node --check web/app.js && node --check web/v2.js
       - name: Contract snapshot stays in sync
         env:
           PYTHONPATH: control-plane:.
         run: |
           python -m contracts.export
-          git diff --exit-code -- contracts/openapi-v1.json
+          python -m contracts.export_v2
+          git diff --exit-code -- contracts/openapi-v1.json contracts/openapi-v2.json contracts/openapi-internal-v2.json
+
+  temporal-replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r control-plane/requirements.txt
+      - name: Real Temporal workflow, activity retry and history replay
+        env:
+          PYTHONPATH: control-plane:.
+          TEST_TEMPORAL: '1'
+        run: python -m unittest discover -s tests/acceptance -p test_temporal_integration.py -v

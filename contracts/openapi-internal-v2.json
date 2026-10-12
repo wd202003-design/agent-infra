@@ -1,0 +1,240 @@
+{
+  "components": {
+    "schemas": {
+      "Command": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "expected_epoch": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Epoch"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "payload_ref": {
+            "default": "",
+            "maxLength": 256,
+            "title": "Payload Ref",
+            "type": "string"
+          },
+          "task_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Task Id",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "make_ready",
+              "schedule_safe_retry",
+              "mark_waiting",
+              "request_stop",
+              "reconcile"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "task_id",
+          "expected_version",
+          "type"
+        ],
+        "title": "Command",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/task-commands": {
+      "post": {
+        "operationId": "command_task_commands_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Command"
+      }
+    },
+    "/tasks/{task_id}": {
+      "get": {
+        "operationId": "inspect_tasks__task_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Inspect"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/internal/v2"
+    }
+  ]
+}

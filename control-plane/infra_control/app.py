@@ -32,7 +32,7 @@ class BodyLimit:
             if message["type"] == "http.disconnect":
                 return
             data.extend(message.get("body", b""))
-            if len(data) > 131072:
+            if len(data) > (262144 if scope.get("path", "").startswith(("/v2/", "/internal/v2/")) else 131072):
                 return await JSONResponse({"code": "body_too_large"}, 413)(scope, receive, send)
             if not message.get("more_body", False):
                 break
@@ -247,6 +247,16 @@ def create_app(db=None, users=None, *, gateway=None, service=None, transport=Non
             raise Fault("model_outcome_unknown", 502)
         await asyncio.to_thread(svc.finish_model, call["id"], answer, actual)
         return answer
+
+    if os.environ.get("AGENT_ENABLE_V2") == "1":
+        from .v2.api import configured_platform, create_api
+        platform = configured_platform(db)
+        api, internal = create_api(platform, users,
+            gateway=json.loads(os.environ.get("AGENT_V2_MODEL_JSON", "null")),
+            internal_token_hash=os.environ["AGENT_INTERNAL_TOKEN_SHA256"])
+        app.mount("/v2", api)
+        app.mount("/internal/v2", internal)
+        app.state.v2 = platform
 
     app.mount("/", StaticFiles(directory=Path(__file__).resolve().parents[2] / "web", html=True), name="web")
     schema = app.openapi()

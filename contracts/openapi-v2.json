@@ -1,0 +1,3605 @@
+{
+  "components": {
+    "schemas": {
+      "AgentVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "input_schema": {
+            "additionalProperties": true,
+            "title": "Input Schema",
+            "type": "object"
+          },
+          "instruction": {
+            "default": "",
+            "maxLength": 4096,
+            "title": "Instruction",
+            "type": "string"
+          },
+          "kind": {
+            "default": "python",
+            "enum": [
+              "python",
+              "shell",
+              "browser"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "max_output_tokens": {
+            "default": 1024,
+            "maximum": 4096.0,
+            "minimum": 64.0,
+            "title": "Max Output Tokens",
+            "type": "integer"
+          },
+          "max_steps": {
+            "default": 4,
+            "maximum": 16.0,
+            "minimum": 1.0,
+            "title": "Max Steps",
+            "type": "integer"
+          },
+          "mode": {
+            "default": "program",
+            "enum": [
+              "program",
+              "agent"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "policy_ref": {
+            "$ref": "#/components/schemas/Ref"
+          },
+          "runtime_version": {
+            "const": "json-loop-2.0",
+            "default": "json-loop-2.0",
+            "title": "Runtime Version",
+            "type": "string"
+          },
+          "side_effect_class": {
+            "default": "pure",
+            "enum": [
+              "pure",
+              "read_only",
+              "artifact_only"
+            ],
+            "title": "Side Effect Class",
+            "type": "string"
+          },
+          "source": {
+            "default": "",
+            "maxLength": 16384,
+            "title": "Source",
+            "type": "string"
+          },
+          "tool_timeout": {
+            "default": 30,
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Tool Timeout",
+            "type": "integer"
+          },
+          "tools": {
+            "items": {
+              "enum": [
+                "python",
+                "shell",
+                "browser"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Tools",
+            "type": "array"
+          },
+          "version": {
+            "pattern": "^[a-zA-Z0-9._-]{1,40}$",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "version",
+          "description",
+          "policy_ref"
+        ],
+        "title": "AgentVersion",
+        "type": "object"
+      },
+      "Authorize": {
+        "additionalProperties": false,
+        "properties": {
+          "args_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Args Hash",
+            "type": "string"
+          },
+          "epoch": {
+            "minimum": 1.0,
+            "title": "Epoch",
+            "type": "integer"
+          },
+          "operation_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "policy_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Policy Digest",
+            "type": "string"
+          },
+          "step_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Step Id",
+            "type": "string"
+          },
+          "tool": {
+            "enum": [
+              "python",
+              "shell",
+              "browser"
+            ],
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "epoch",
+          "step_id",
+          "operation_id",
+          "tool",
+          "args_hash",
+          "policy_digest"
+        ],
+        "title": "Authorize",
+        "type": "object"
+      },
+      "Budget": {
+        "additionalProperties": false,
+        "properties": {
+          "cost_limit": {
+            "default": 1000000,
+            "maximum": 1000000000.0,
+            "minimum": 0.0,
+            "title": "Cost Limit",
+            "type": "integer"
+          },
+          "currency": {
+            "default": "USD",
+            "enum": [
+              "USD",
+              "CNY"
+            ],
+            "title": "Currency",
+            "type": "string"
+          },
+          "mode": {
+            "default": "soft",
+            "enum": [
+              "soft",
+              "hard"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "token_limit": {
+            "default": 16000,
+            "maximum": 100000.0,
+            "minimum": 1024.0,
+            "title": "Token Limit",
+            "type": "integer"
+          }
+        },
+        "title": "Budget",
+        "type": "object"
+      },
+      "CAS": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "CAS",
+        "type": "object"
+      },
+      "Cancel": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "reason": {
+            "default": "user_request",
+            "maxLength": 256,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "Cancel",
+        "type": "object"
+      },
+      "Claim": {
+        "additionalProperties": false,
+        "properties": {
+          "advertised_slots": {
+            "maximum": 32.0,
+            "minimum": 1.0,
+            "title": "Advertised Slots",
+            "type": "integer"
+          },
+          "claim_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "protocol": {
+            "const": "2.0",
+            "title": "Protocol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "protocol",
+          "advertised_slots"
+        ],
+        "title": "Claim",
+        "type": "object"
+      },
+      "Complete": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "minimum": 1.0,
+            "title": "Epoch",
+            "type": "integer"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size": {
+            "maximum": 20971520.0,
+            "minimum": 0.0,
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "sha256",
+          "size"
+        ],
+        "title": "Complete",
+        "type": "object"
+      },
+      "Download": {
+        "additionalProperties": false,
+        "properties": {
+          "disposition": {
+            "const": "attachment",
+            "default": "attachment",
+            "title": "Disposition",
+            "type": "string"
+          }
+        },
+        "title": "Download",
+        "type": "object"
+      },
+      "Events": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "minimum": 1.0,
+            "title": "Epoch",
+            "type": "integer"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/RunnerEvent"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "epoch",
+          "events"
+        ],
+        "title": "Events",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Isolation": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "minimum": 1.0,
+            "title": "Epoch",
+            "type": "integer"
+          },
+          "proof": {
+            "maxLength": 4096,
+            "title": "Proof",
+            "type": "string"
+          }
+        },
+        "required": [
+          "epoch",
+          "proof"
+        ],
+        "title": "Isolation",
+        "type": "object"
+      },
+      "Limits": {
+        "additionalProperties": false,
+        "properties": {
+          "cpu": {
+            "const": 1,
+            "default": 1,
+            "title": "Cpu",
+            "type": "integer"
+          },
+          "max_output_tokens": {
+            "default": 1024,
+            "maximum": 4096.0,
+            "minimum": 64.0,
+            "title": "Max Output Tokens",
+            "type": "integer"
+          },
+          "memory_mib": {
+            "const": 2048,
+            "default": 2048,
+            "title": "Memory Mib",
+            "type": "integer"
+          },
+          "pids": {
+            "const": 256,
+            "default": 256,
+            "title": "Pids",
+            "type": "integer"
+          },
+          "tool_timeout": {
+            "default": 30,
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Tool Timeout",
+            "type": "integer"
+          }
+        },
+        "title": "Limits",
+        "type": "object"
+      },
+      "Manifest": {
+        "additionalProperties": false,
+        "properties": {
+          "media_type": {
+            "enum": [
+              "application/json",
+              "text/plain",
+              "image/png",
+              "application/octet-stream"
+            ],
+            "title": "Media Type",
+            "type": "string"
+          },
+          "name": {
+            "pattern": "^[a-zA-Z0-9_.-]{1,120}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size": {
+            "maximum": 20971520.0,
+            "minimum": 0.0,
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "media_type",
+          "size",
+          "sha256"
+        ],
+        "title": "Manifest",
+        "type": "object"
+      },
+      "Message": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 16384,
+            "title": "Content",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "Message",
+        "type": "object"
+      },
+      "Model": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_ref": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Budget Ref",
+            "type": "string"
+          },
+          "epoch": {
+            "minimum": 1.0,
+            "title": "Epoch",
+            "type": "integer"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Messages",
+            "type": "array"
+          },
+          "request_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "step_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "epoch",
+          "step_id",
+          "request_id",
+          "messages",
+          "budget_ref"
+        ],
+        "title": "Model",
+        "type": "object"
+      },
+      "NodePatch": {
+        "additionalProperties": false,
+        "properties": {
+          "draining": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draining"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "slots_limit": {
+            "anyOf": [
+              {
+                "maximum": 32.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slots Limit"
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "NodePatch",
+        "type": "object"
+      },
+      "NodePolicy": {
+        "additionalProperties": false,
+        "properties": {
+          "backend": {
+            "default": "demo",
+            "enum": [
+              "demo",
+              "opensandbox"
+            ],
+            "title": "Backend",
+            "type": "string"
+          },
+          "capabilities": {
+            "items": {
+              "enum": [
+                "python",
+                "shell",
+                "browser"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "location": {
+            "default": "server",
+            "enum": [
+              "server",
+              "local",
+              "edge"
+            ],
+            "title": "Location",
+            "type": "string"
+          },
+          "owner": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Owner",
+            "type": "string"
+          },
+          "pool": {
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "title": "Pool",
+            "type": "string"
+          },
+          "slots_limit": {
+            "default": 1,
+            "maximum": 32.0,
+            "minimum": 1.0,
+            "title": "Slots Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pool",
+          "owner"
+        ],
+        "title": "NodePolicy",
+        "type": "object"
+      },
+      "PolicyVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_pools": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+              "type": "string"
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Allowed Pools",
+            "type": "array"
+          },
+          "data_classes": {
+            "items": {
+              "enum": [
+                "public",
+                "private",
+                "edge_summary"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Data Classes",
+            "type": "array"
+          },
+          "egress_rules": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 0,
+            "title": "Egress Rules",
+            "type": "array"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/Limits"
+          },
+          "tool_kinds": {
+            "items": {
+              "enum": [
+                "python",
+                "shell",
+                "browser"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Tool Kinds",
+            "type": "array"
+          },
+          "upload_schema": {
+            "additionalProperties": true,
+            "title": "Upload Schema",
+            "type": "object"
+          },
+          "version": {
+            "pattern": "^[a-zA-Z0-9._-]{1,40}$",
+            "title": "Version",
+            "type": "string"
+          },
+          "workspace_refs": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Workspace Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "allowed_pools",
+          "tool_kinds"
+        ],
+        "title": "PolicyVersion",
+        "type": "object"
+      },
+      "ReconcileUsage": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_tokens": {
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Actual Tokens",
+            "type": "integer"
+          },
+          "cost": {
+            "maximum": 1000000000.0,
+            "minimum": 0.0,
+            "title": "Cost",
+            "type": "integer"
+          },
+          "currency": {
+            "enum": [
+              "USD",
+              "CNY"
+            ],
+            "title": "Currency",
+            "type": "string"
+          },
+          "evidence_ref": {
+            "maxLength": 512,
+            "minLength": 10,
+            "title": "Evidence Ref",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_version",
+          "actual_tokens",
+          "cost",
+          "currency",
+          "evidence_ref"
+        ],
+        "title": "ReconcileUsage",
+        "type": "object"
+      },
+      "Ref": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^[a-zA-Z0-9._-]{1,40}$",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version"
+        ],
+        "title": "Ref",
+        "type": "object"
+      },
+      "Register": {
+        "additionalProperties": false,
+        "properties": {
+          "instance_public_info": {
+            "maxLength": 512,
+            "title": "Instance Public Info",
+            "type": "string"
+          },
+          "protocol": {
+            "const": "2.0",
+            "title": "Protocol",
+            "type": "string"
+          },
+          "registration_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Registration Id",
+            "type": "string"
+          },
+          "ticket_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Ticket Id",
+            "type": "string"
+          },
+          "ticket_secret": {
+            "maxLength": 128,
+            "minLength": 24,
+            "title": "Ticket Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticket_id",
+          "ticket_secret",
+          "registration_id",
+          "protocol",
+          "instance_public_info"
+        ],
+        "title": "Register",
+        "type": "object"
+      },
+      "Renew": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "minimum": 1.0,
+            "title": "Epoch",
+            "type": "integer"
+          },
+          "health": {
+            "default": "healthy",
+            "enum": [
+              "healthy",
+              "unhealthy"
+            ],
+            "title": "Health",
+            "type": "string"
+          },
+          "last_ack_seq": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Last Ack Seq",
+            "type": "integer"
+          },
+          "task_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "epoch",
+          "task_id"
+        ],
+        "title": "Renew",
+        "type": "object"
+      },
+      "Report": {
+        "additionalProperties": false,
+        "properties": {
+          "cleanup_evidence_ref": {
+            "default": "",
+            "maxLength": 4096,
+            "title": "Cleanup Evidence Ref",
+            "type": "string"
+          },
+          "epoch": {
+            "minimum": 1.0,
+            "title": "Epoch",
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "cancelled",
+              "needs_review"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "result": {
+            "default": "",
+            "maxLength": 32768,
+            "title": "Result",
+            "type": "string"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Ref"
+          },
+          "sandbox_ref": {
+            "default": "",
+            "maxLength": 256,
+            "title": "Sandbox Ref",
+            "type": "string"
+          },
+          "stop_evidence_ref": {
+            "default": "",
+            "maxLength": 4096,
+            "title": "Stop Evidence Ref",
+            "type": "string"
+          },
+          "unknown_effects": {
+            "default": true,
+            "title": "Unknown Effects",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "epoch",
+          "outcome"
+        ],
+        "title": "Report",
+        "type": "object"
+      },
+      "Review": {
+        "additionalProperties": false,
+        "properties": {
+          "cleanup_confirmed": {
+            "const": true,
+            "title": "Cleanup Confirmed",
+            "type": "boolean"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "stop_confirmed": {
+            "const": true,
+            "title": "Stop Confirmed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expected_version",
+          "outcome",
+          "evidence_refs",
+          "stop_confirmed",
+          "cleanup_confirmed"
+        ],
+        "title": "Review",
+        "type": "object"
+      },
+      "Revoke": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "Revoke",
+        "type": "object"
+      },
+      "Rotate": {
+        "additionalProperties": false,
+        "properties": {
+          "protocol": {
+            "const": "2.0",
+            "title": "Protocol",
+            "type": "string"
+          },
+          "rotation_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Rotation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rotation_id",
+          "protocol"
+        ],
+        "title": "Rotate",
+        "type": "object"
+      },
+      "RunnerEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "pattern": "^[a-f0-9-]{36}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "runner_seq": {
+            "minimum": 1.0,
+            "title": "Runner Seq",
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "log",
+              "step_started",
+              "step_finished",
+              "sandbox_created",
+              "stop_observed"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "runner_seq",
+          "event_id",
+          "type"
+        ],
+        "title": "RunnerEvent",
+        "type": "object"
+      },
+      "Submit": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_ref": {
+            "$ref": "#/components/schemas/Ref"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/Budget"
+          },
+          "data_class": {
+            "default": "public",
+            "enum": [
+              "public",
+              "private",
+              "edge_summary"
+            ],
+            "title": "Data Class",
+            "type": "string"
+          },
+          "input": {
+            "additionalProperties": true,
+            "title": "Input",
+            "type": "object"
+          },
+          "policy_ref": {
+            "$ref": "#/components/schemas/Ref"
+          },
+          "pool": {
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "title": "Pool",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 180,
+            "maximum": 600.0,
+            "minimum": 10.0,
+            "title": "Timeout Seconds",
+            "type": "integer"
+          },
+          "workspace_ref": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Ref"
+          }
+        },
+        "required": [
+          "agent_ref",
+          "policy_ref",
+          "pool"
+        ],
+        "title": "Submit",
+        "type": "object"
+      },
+      "Upload": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "minimum": 1.0,
+            "title": "Epoch",
+            "type": "integer"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/Manifest"
+          }
+        },
+        "required": [
+          "epoch",
+          "manifest"
+        ],
+        "title": "Upload",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VerifyCapability": {
+        "additionalProperties": false,
+        "properties": {
+          "args_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Args Hash",
+            "type": "string"
+          },
+          "capability": {
+            "maxLength": 4096,
+            "title": "Capability",
+            "type": "string"
+          },
+          "tool": {
+            "enum": [
+              "python",
+              "shell",
+              "browser"
+            ],
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "capability",
+          "tool",
+          "args_hash"
+        ],
+        "title": "VerifyCapability",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "Agent Infra v2",
+    "version": "2.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/agents": {
+      "get": {
+        "operationId": "agents_agents_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Agents"
+      }
+    },
+    "/agents/{agent_id}/versions": {
+      "post": {
+        "operationId": "publish_agent_agents__agent_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Publish Agent"
+      }
+    },
+    "/artifacts/{artifact_id}/download": {
+      "post": {
+        "operationId": "download_artifacts__artifact_id__download_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artifact_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Artifact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Download"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Download"
+      }
+    },
+    "/audit": {
+      "get": {
+        "operationId": "audit_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "After",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Audit"
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "me_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Me"
+      }
+    },
+    "/metrics": {
+      "get": {
+        "operationId": "metrics_metrics_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Metrics"
+      }
+    },
+    "/nodes": {
+      "get": {
+        "operationId": "nodes_nodes_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Nodes"
+      }
+    },
+    "/nodes/tickets": {
+      "post": {
+        "operationId": "ticket_nodes_tickets_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NodePolicy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Ticket"
+      }
+    },
+    "/nodes/{node_id}": {
+      "patch": {
+        "operationId": "patch_nodes__node_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Node Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NodePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Patch"
+      }
+    },
+    "/nodes/{node_id}/revoke": {
+      "post": {
+        "operationId": "revoke_nodes__node_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Node Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Revoke"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Revoke"
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "schema_openapi_json_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Schema"
+      }
+    },
+    "/policies": {
+      "get": {
+        "operationId": "policies_policies_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Policies"
+      }
+    },
+    "/policies/{policy_id}/versions": {
+      "post": {
+        "operationId": "publish_policy_policies__policy_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Publish Policy"
+      }
+    },
+    "/policies/{policy_id}/versions/{version}/revoke": {
+      "post": {
+        "operationId": "revoke_policy_policies__policy_id__versions__version__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-zA-Z0-9._-]{1,40}$",
+              "title": "Version",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Revoke"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Revoke Policy"
+      }
+    },
+    "/runner/attempts/{attempt_id}/artifacts": {
+      "post": {
+        "operationId": "upload_runner_attempts__attempt_id__artifacts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Upload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Upload"
+      }
+    },
+    "/runner/attempts/{attempt_id}/authorize-step": {
+      "post": {
+        "operationId": "authorize_runner_attempts__attempt_id__authorize_step_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Authorize"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Authorize"
+      }
+    },
+    "/runner/attempts/{attempt_id}/events": {
+      "post": {
+        "operationId": "runner_events_runner_attempts__attempt_id__events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Events"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Runner Events"
+      }
+    },
+    "/runner/attempts/{attempt_id}/model": {
+      "post": {
+        "operationId": "invoke_runner_attempts__attempt_id__model_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Model"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Invoke"
+      }
+    },
+    "/runner/attempts/{attempt_id}/renew": {
+      "post": {
+        "operationId": "renew_runner_attempts__attempt_id__renew_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Renew"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Renew"
+      }
+    },
+    "/runner/attempts/{attempt_id}/report": {
+      "post": {
+        "operationId": "report_runner_attempts__attempt_id__report_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Report"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Report"
+      }
+    },
+    "/runner/attempts/{attempt_id}/verify-isolation": {
+      "post": {
+        "operationId": "isolation_runner_attempts__attempt_id__verify_isolation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Isolation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Isolation"
+      }
+    },
+    "/runner/claim": {
+      "post": {
+        "operationId": "claim_runner_claim_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Claim"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Claim"
+      }
+    },
+    "/runner/register": {
+      "post": {
+        "operationId": "register_runner_register_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Register"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Register"
+      }
+    },
+    "/runner/rotate": {
+      "post": {
+        "operationId": "rotate_runner_rotate_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Rotate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Rotate"
+      }
+    },
+    "/runner/uploads/{upload_id}/complete": {
+      "post": {
+        "operationId": "complete_runner_uploads__upload_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Upload Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Complete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Complete"
+      }
+    },
+    "/runner/verify-capability": {
+      "post": {
+        "operationId": "verify_runner_verify_capability_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCapability"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Verify"
+      }
+    },
+    "/tasks": {
+      "get": {
+        "operationId": "tasks_tasks_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Tasks"
+      },
+      "post": {
+        "operationId": "submit_tasks_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Submit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Submit"
+      }
+    },
+    "/tasks/{task_id}": {
+      "get": {
+        "operationId": "task_tasks__task_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Task"
+      }
+    },
+    "/tasks/{task_id}/artifacts": {
+      "get": {
+        "operationId": "artifact_list_tasks__task_id__artifacts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Artifact List"
+      }
+    },
+    "/tasks/{task_id}/cancel": {
+      "post": {
+        "operationId": "cancel_tasks__task_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cancel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Cancel"
+      }
+    },
+    "/tasks/{task_id}/content": {
+      "delete": {
+        "operationId": "delete_tasks__task_id__content_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CAS"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Delete"
+      }
+    },
+    "/tasks/{task_id}/events": {
+      "get": {
+        "operationId": "events_tasks__task_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Events"
+      }
+    },
+    "/tasks/{task_id}/rerun": {
+      "post": {
+        "operationId": "rerun_tasks__task_id__rerun_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Submit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Rerun"
+      }
+    },
+    "/tasks/{task_id}/review": {
+      "post": {
+        "operationId": "review_tasks__task_id__review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Review"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Review"
+      }
+    },
+    "/tasks/{task_id}/usage": {
+      "get": {
+        "operationId": "usage_tasks__task_id__usage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Usage"
+      }
+    },
+    "/tasks/{task_id}/usage/{request_id}/reconcile": {
+      "post": {
+        "operationId": "usage_review_tasks__task_id__usage__request_id__reconcile_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9-]{36}$",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Authorization",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileUsage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Usage Review"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/v2"
+    }
+  ]
+}
