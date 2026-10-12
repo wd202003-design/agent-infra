@@ -1,5 +1,7 @@
 # contracts：版本化契约需求
 
+D1 完整目标细节见 [设计基线](platform-next.md)；当前代码支持范围仍按实现状态记录。以下原始需求继续作为验收依据。
+
 状态：已实现子集由 `models.py` 与 [OpenAPI v1](openapi-v1.json) 定义，`PYTHONPATH=control-plane:. python -m contracts.export` 可重新导出；实现决策见 ADR 0004。下文保留完整设计草案；新增状态职责提议见 [ADR 0003](../docs/adr/0003-platform-contract-draft.md)。现有开发 API 继续以 [devserver](../devserver/README.md) 为准。本目录后续保存 OpenAPI/JSON Schema 或选定协议定义及兼容性测试，具体格式待决。
 
 ## 数据对象和信任边界

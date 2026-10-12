@@ -2,7 +2,7 @@
 
 面向服务器、本机和在线边缘节点的统一 Agent 执行平台。
 
-> 当前状态：正式模块首轮实现。已提供 PostgreSQL 控制面、独立 Runner、v1 契约、Web 和有限模型工具循环；真实沙箱/模型及三类节点、容量仍待验收。完整差距见 docs/implementation-status.md。
+> 当前状态：D1 完整设计基线 + 正式模块首轮实现。已提供 PostgreSQL 控制面、独立 Runner、v1 契约、Web 和有限模型工具循环；真实沙箱/模型及三类节点、容量仍待验收。完整差距见 docs/implementation-status.md。
 
 ## MVP 目标
 
@@ -15,6 +15,8 @@
 - 同一个 Runner 协议覆盖三类节点；MVP 边缘节点在线接入中央调度。
 
 ## 文档入口
+
+- [完整设计基线 D1](docs/design/README.md)
 
 - [正式模块启动](deploy/platform.md)
 - [实现状态与验证证据](docs/implementation-status.md)
@@ -47,8 +49,8 @@
 ## 技术决策状态
 
 控制面按模块化服务设计，使用 PostgreSQL 与对象存储作为目标存储方案。
-工作流引擎在 Hatchet / Temporal 中择一；Agent Runtime 和模型网关各选一种。
-OpenSandbox 为 PoC 基线，生产沙箱仍待实测。ADR 0004 选择 Python 作为首轮模块语言、Linux 为首个节点 OS，数据库队列与有限 JSON Runtime 作为当前实现；外部工作流引擎、Runtime/网关产品选型仍待决。
+完整目标设计见 ADR 0005：Temporal 持久协调、自有有限 JSON Runtime、内置 model-access 网关、S3 API 产物存储。
+OpenSandbox 为首发集成基线，生产启用仍须真实隔离/回收验证；Cube 保留受门槛控制的候选。Python/Linux 沿用 ADR 0004，现有数据库队列向目标协调器的迁移按 D1 推进，未实现部分见状态清单。
 
 ## 获取项目
 
@@ -59,7 +61,7 @@ cd agent-infra
 
 按 [正式模块启动说明](deploy/platform.md) 启动 http://127.0.0.1:8766。默认 Demo 不执行源码。旧版开发控制台仍可按 devserver/README.md 启动在 8765；两个服务使用不同数据和契约。正式 Runner 暂未开放 Cube 后端。
 
-开发版使用 Python/FastAPI/SQLite，见 ADR 0002；不代表已确定正式控制面语言、工作流引擎或生产数据库替代方案。
+旧开发版使用 Python/FastAPI/SQLite，范围见 ADR 0002；不作为正式 PostgreSQL 的替代或完整 MVP 验收结果。
 
 ## 许可与凭证
 

@@ -1,5 +1,7 @@
 # tests/acceptance：验收设计
 
+D1 完整目标细节见 [设计基线](../../docs/design/operations-acceptance.md)；当前代码支持范围仍按实现状态记录。以下原始需求继续作为验收依据。
+
 状态：已有 `test_platform.py` 的 28 项自动化用例，覆盖正式模块实现子集；运行方式与环境证据见 [实现状态](../../docs/implementation-status.md)。下表是完整测试计划，不是全部已通过结果。旧开发版 15 项与沙箱 PoC 9 项检查继续保留。
 
 ## 需求追踪与用例

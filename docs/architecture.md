@@ -2,7 +2,7 @@
 
 本文为正式平台目标设计；当前正式模块的 Python/PostgreSQL/独立 Runner 实现范围见 ADR 0004 和 implementation-status.md。外部引擎、对象存储等下列目标尚未全部实现；devserver 范围仍见 ADR 0002。
 
-模块需求见 [需求索引](requirements.md)；正式接口与状态细化见 [契约草案](../contracts/README.md)。新增细节由提议中的 ADR 0003 跟踪，尚待评审冻结。
+模块需求见 [需求索引](requirements.md)；正式接口与状态细化见 [契约草案](../contracts/README.md)。目标细节由 [D1](design/README.md) 与 ADR 0005 收敛；当前 v1 和后续 v2 的实现状态分别维护。
 
 ## 模块关系
 
@@ -88,14 +88,9 @@ Agent 槽位与 LLM 并发分别控制。多个 API Key 若共享供应商额度
 硬预算需要可界定的最大输出、预留策略及统一执行路径；无法严格保证时 UI 必须显示为软限制。
 共享额度存储不可用时，默认暂停新模型请求并显示原因。
 
-## 待决事项
+## 目标设计基线
 
-1. 控制服务与 Runner 的实现语言及本机首个目标 OS。
-2. Hatchet 或 Temporal 的同负载 PoC 结果及接入契约。
-3. 单一 Agent Runtime 与模型网关的选型。
-4. Runner 传输协议、鉴权方案与版本兼容规则。
-5. 容器及本机权限强制机制、开发部署方式。
-6. 日志、产物保留期限以及用户删除流程。
+[ADR 0005](adr/0005-mvp-design-baseline.md) 确定 Python/Linux、Temporal、自有有限 Runtime、内置网关和 S3 API；[D1](design/README.md) 补齐规范化表、outbox、节点鉴权、执行证明、对象/费用、保留和恢复策略。文中模块关系是目标，当前数据库队列、管理 API 清理证据与 JSON 产物仍是过渡实现，不视作外部组件已接入。
 
 ## 动态执行边界
 

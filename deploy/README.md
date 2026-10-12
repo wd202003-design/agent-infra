@@ -1,5 +1,7 @@
 # deploy：环境与运维需求
 
+D1 完整目标细节见 [设计基线](../docs/design/operations-acceptance.md)；当前代码支持范围仍按实现状态记录。以下原始需求继续作为验收依据。
+
 状态：已提供首轮 Dockerfile、PostgreSQL Compose、凭证初始化和 [正式模块启动说明](platform.md)，尚未在本环境运行 Docker。旧开发启动使用 [devserver 说明](../devserver/README.md)；真实沙箱准备见 [PoC](../poc/sandbox/README.md)。本文不提供尚未存在的启动命令。
 
 ## 环境划分

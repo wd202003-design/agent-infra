@@ -1,5 +1,7 @@
 # examples：业务样例需求
 
+D1 完整目标细节见 [设计基线](../docs/design/operations-acceptance.md)；当前代码支持范围仍按实现状态记录。以下原始需求继续作为验收依据。
+
 状态：已有 `agents.json` 与 `bootstrap.py`，提供固定代码/Shell/浏览器及有限模型 Agent 的注册。尚无 EX-01/02/03 的完整真实验收证据；下文为目标。现有固定沙箱 fixture 位于 poc/sandbox。
 
 每个样例必须提交无敏感数据的 fixture、固定 Agent 版本/摘要、输入 schema、工具/网络/文件策略、资源/步数/时间/费用上限、执行方式、断言和可重现证据。不存放真实用户工作区或生产站点数据。
