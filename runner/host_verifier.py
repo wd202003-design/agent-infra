@@ -209,6 +209,7 @@ def create_app():
             os.environ["AGENT_EGRESS_PROXY_IP"],
             int(os.environ.get("AGENT_EGRESS_PROXY_PORT", "3128")),
             os.environ["AGENT_EGRESS_MANAGEMENT_CIDR"],
+            int(os.environ.get("AGENT_EGRESS_MANAGEMENT_PORT", "44772")),
         )
     observer = Observer(
         httpx.AsyncClient(

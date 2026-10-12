@@ -23,6 +23,7 @@ def main():
     suffix = uuid.uuid4().hex[:6]
     ns, host, guest = "egress-" + suffix, "eh" + suffix, "eg" + suffix
     holder = None
+    helper = None
     sockets = []
     run("ip", "netns", "add", ns)
     try:
@@ -34,10 +35,28 @@ def main():
             "169.254.169.254/32",
             "fd00:233::1/64",
         ):
-            run("ip", "addr", "add", addr, "dev", host)
+            run(
+                "ip",
+                "addr",
+                "add",
+                addr,
+                "dev",
+                host,
+                *(["nodad"] if ":" in addr else []),
+            )
         run("ip", "link", "set", host, "up")
         for addr in ("10.233.0.2/24", "fd00:233::2/64"):
-            run("ip", "-n", ns, "addr", "add", addr, "dev", guest)
+            run(
+                "ip",
+                "-n",
+                ns,
+                "addr",
+                "add",
+                addr,
+                "dev",
+                guest,
+                *(["nodad"] if ":" in addr else []),
+            )
         run("ip", "-n", ns, "link", "set", guest, "up")
         run("ip", "-n", ns, "link", "set", "lo", "up")
         run("ip", "-n", ns, "route", "add", "default", "via", "10.233.0.1")
@@ -103,9 +122,34 @@ def main():
         serve("169.254.169.254", 80)
         serve("fd00:233::1", 443, ipv6=True)
         serve("10.233.0.3", 53, udp=True)
+        helper_program = """
+import socket,threading,time
+servers=[]
+def serve(host,port,udp):
+ s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM if udp else socket.SOCK_STREAM);s.bind((host,port));servers.append(s)
+ if not udp:s.listen()
+ def loop():
+  while True:
+   if udp:
+    data,peer=s.recvfrom(128);s.sendto(data,peer)
+   else:
+    c,_=s.accept();c.sendall(b'ok');c.close()
+ threading.Thread(target=loop,daemon=True).start()
+serve('127.0.0.11',53,True)
+serve('127.0.0.11',53,False)
+serve('127.0.0.1',9000,False)
+print('ready',flush=True)
+time.sleep(120)
+"""
+        helper = subprocess.Popen(
+            ["ip", "netns", "exec", ns, sys.executable, "-c", helper_program],
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        assert helper.stdout.readline().strip() == "ready"
         program = """
 import socket
-cases = [("10.233.0.3",3128,False,False,True),("10.233.0.3",443,False,False,False),("10.233.0.1",443,False,False,False),("169.254.169.254",80,False,False,False),("fd00:233::1",443,True,False,False),("10.233.0.3",53,False,True,False)]
+cases = [("10.233.0.3",3128,False,False,True),("10.233.0.3",443,False,False,False),("10.233.0.1",443,False,False,False),("169.254.169.254",80,False,False,False),("fd00:233::1",443,True,False,False),("10.233.0.3",53,False,True,False),("127.0.0.11",53,False,True,False),("127.0.0.11",53,False,False,False),("127.0.0.1",9000,False,False,True)]
 for host,port,v6,udp,allowed in cases:
  s=socket.socket(socket.AF_INET6 if v6 else socket.AF_INET,socket.SOCK_DGRAM if udp else socket.SOCK_STREAM);s.settimeout(.4)
  try:
@@ -115,7 +159,7 @@ for host,port,v6,udp,allowed in cases:
  except OSError:actual=False
  finally:s.close()
  assert actual==allowed,(host,port,actual,allowed)
-print("6 real namespace network checks passed")
+print("9 real namespace network checks passed")
 """
         print(run("ip", "netns", "exec", ns, sys.executable, "-c", program))
         # A removed rule must invalidate independent certification.
@@ -140,6 +184,9 @@ print("6 real namespace network checks passed")
     finally:
         for sock in sockets:
             sock.close()
+        if helper:
+            helper.terminate()
+            helper.wait()
         if holder:
             holder.terminate()
             holder.wait()

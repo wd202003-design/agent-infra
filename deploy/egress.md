@@ -14,6 +14,7 @@
 export AGENT_EGRESS_PROXY_IP=172.30.0.1
 export AGENT_EGRESS_PROXY_PORT=3128
 export AGENT_EGRESS_MANAGEMENT_CIDR=172.30.0.1/32
+export AGENT_EGRESS_MANAGEMENT_PORT=44772
 ```
 
 保留既有验证器 TLS、Docker 标签、管理 API、签名密钥与认证配置。`/network` 根据 Docker 观察出的 PID 安装规则；调用者不能传 PID、命令或 nft 内容。安装不覆盖未知旧规则；读取和精确比对失败则拒绝。策略规则只在 guest netns 内，不修改宿主 ruleset。停止/删除容器后该 netns 规则随之消失。

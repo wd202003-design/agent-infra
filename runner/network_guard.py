@@ -69,7 +69,11 @@ def rules(proxy_ip, proxy_port, management_cidr, management_port):
         ],
     )
     net = ipaddress.IPv4Network(management_cidr)
-    prefix = {"prefix": {"addr": str(net.network_address), "len": net.prefixlen}}
+    prefix = (
+        str(net.network_address)
+        if net.prefixlen == 32
+        else {"prefix": {"addr": str(net.network_address), "len": net.prefixlen}}
+    )
     add(
         "input",
         [
