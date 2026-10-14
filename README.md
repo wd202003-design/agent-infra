@@ -71,3 +71,7 @@ cd agent-infra
 ## D1 v2 编码进展
 
 新增 [v2 实现状态与差距](docs/implementation-v2.md)、[v2 集成启动](deploy/v2.md)、独立控制台 `/v2.html`。v2 默认关闭；不要将 Mock/Demo 验证当作真实沙箱、S3 或容量验收。
+
+## Pi 图片 Agent
+
+新增可选 `/v3` 两层任务调度与 Pi 图片 Worker，支持生成、编辑及依赖图片筛选。详见 [协议与部署](docs/image-agent-v3.md) 和 [ADR 0008](docs/adr/0008-pi-image-agent.md)。默认关闭，真实供应商与存储联调尚待完成。

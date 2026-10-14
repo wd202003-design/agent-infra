@@ -41,3 +41,7 @@ CT-01/02/03/05、CP-01/02/03/05、RN-01/02/05、WB-01/02/04、DP-01/04 已有子
 ## v2 编码分支
 
 D1 后续编码见 [v2 实现与剩余差距](implementation-v2.md)。本页原有 v1 验收结论不扩展为 v2 完成声明。
+
+## v3 图片应用增量
+
+见 [Pi 图片 Agent](image-agent-v3.md) 与 [ADR 0008](adr/0008-pi-image-agent.md)。本地新增 16 项 Python 状态/故障测试及 6 项真实 Pi SDK/Worker 模拟供应商测试通过；全部 acceptance 共 110 项，其中 108 通过、2 项真实 Temporal 按环境跳过。PostgreSQL 与 Temporal 以当前提交 CI 为准。未做真实付费供应商、真实 S3 或生产网络验收；异步槽位释放、完整会话恢复、专用图片 UI 与自动归档未实现。

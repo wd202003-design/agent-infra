@@ -11,3 +11,5 @@ cryptography==50.0.2
 jsonschema==4.26.0
 
 h11==0.16.0
+
+Pillow==11.3.0

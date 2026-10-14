@@ -32,7 +32,8 @@ jobs:
         run: |
           python -m contracts.export
           python -m contracts.export_v2
-          git diff --exit-code -- contracts/openapi-v1.json contracts/openapi-v2.json contracts/openapi-internal-v2.json
+          python -m contracts.export_v3
+          git diff --exit-code -- contracts/openapi-v1.json contracts/openapi-v2.json contracts/openapi-internal-v2.json contracts/openapi-v3.json
 
   temporal-replay:
     runs-on: ubuntu-latest
@@ -47,3 +48,17 @@ jobs:
           PYTHONPATH: control-plane:.
           TEST_TEMPORAL: '1'
         run: python -m unittest discover -s tests/acceptance -p test_temporal_integration.py -v
+
+  pi-image-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: runtime/pi-agent/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: runtime/pi-agent
+      - run: npm test
+        working-directory: runtime/pi-agent

@@ -1,0 +1,1 @@
+{"name":"@agent-infra/pi-image-runtime","private":true,"version":"1.0.0","type":"module","engines":{"node":">=22"},"scripts":{"test":"node --test test/*.test.mjs"},"dependencies":{"@mariozechner/pi-ai":"0.68.1","@mariozechner/pi-coding-agent":"0.68.0","@sinclair/typebox":"0.34.49"}}

@@ -94,4 +94,4 @@ class Database:
 
     def ready(self):
         with self.transaction() as tx:
-            return tx.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 3
+            return tx.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 4
