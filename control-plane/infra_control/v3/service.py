@@ -574,6 +574,10 @@ class Images:
             r, c, a = self.active(tx, w, id, p)
 
             def apply():
+                existing = self.maybe(tx, "operation", p.operation_id)
+                if existing and existing["attempt_id"] != id:
+                    raise Fault("OPERATION_CONFLICT", 409)
+
                 for old in self.rows(tx, "operation", r["id"]):
                     if old["id"] == p.operation_id or (
                         old["attempt_id"] == id

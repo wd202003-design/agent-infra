@@ -12,7 +12,7 @@ def main():
     args = parser.parse_args()
     if args.command == "migrate":
         Database(os.environ["AGENT_DATABASE_URL"]).migrate()
-        print("schema version 1 ready")
+        print("database migrations complete")
     else:
         import uvicorn
         from .app import create_app

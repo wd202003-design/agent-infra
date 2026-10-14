@@ -3,7 +3,7 @@
 from typing import Any, Literal
 from pydantic import Field, model_validator
 from .models import Contract
-from .v2 import ID, Name, SHA
+from .v2 import ID, Name, SHA, CAS as CAS
 
 
 class Ref(Contract):

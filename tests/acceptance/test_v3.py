@@ -159,6 +159,31 @@ class ImageTests(unittest.TestCase):
         self.assertEqual(sum(j["task"] is not None for j in jobs), 2)
         self.assertEqual(len({j["attempt"]["slot"] for j in jobs if j["task"]}), 2)
 
+    def test_operation_ids_cannot_overwrite_another_root(self):
+        self.root(1)
+        first = self.claim()
+        original = self.op(first)
+        self.root(1)
+        second = self.claim()
+        with self.assertRaises(Fault) as error:
+            self.p.reserve(
+                self.w,
+                second["attempt"]["id"],
+                C.Operation(
+                    **self.fence(second),
+                    operation_id=original["id"],
+                    tool_call_id="collision",
+                    kind="agent",
+                ),
+                uid(),
+            )
+        self.assertEqual(error.exception.code, "OPERATION_CONFLICT")
+        with self.p.tx() as tx:
+            self.assertEqual(
+                self.p.get(tx, "operation", original["id"])["attempt_id"],
+                first["attempt"]["id"],
+            )
+
     def test_worker_slots_are_global_across_roots(self):
         self.w["slots"] = 1
         self.root()
