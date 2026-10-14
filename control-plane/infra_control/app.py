@@ -67,7 +67,22 @@ def create_app(db=None, users=None, *, gateway=None, service=None, transport=Non
     async def lifespan(app):
         if not db.ready():
             raise RuntimeError("Run database migration before starting")
-        yield
+        async def maintain_images():
+            while True:
+                def refresh():
+                    with app.state.v3.tx() as tx:app.state.v3.refresh(tx)
+                try:await asyncio.to_thread(refresh)
+                except Exception:
+                    import logging
+                    logging.getLogger(__name__).error("image_maintenance_failed")
+                await asyncio.sleep(5)
+        maintenance=asyncio.create_task(maintain_images()) if hasattr(app.state,"v3") else None
+        try:yield
+        finally:
+            if maintenance:
+                maintenance.cancel()
+                try:await maintenance
+                except asyncio.CancelledError:pass
 
     app = FastAPI(title="Agent Infra v1", version="0.1.0", lifespan=lifespan,
                   docs_url=None, redoc_url=None, openapi_url=None)
@@ -257,6 +272,11 @@ def create_app(db=None, users=None, *, gateway=None, service=None, transport=Non
         app.mount("/v2", api)
         app.mount("/internal/v2", internal)
         app.state.v2 = platform
+
+    if os.environ.get("AGENT_ENABLE_V3") == "1":
+        from .v3.api import configured as image_platform, create_api as image_api
+        app.state.v3 = image_platform(db)
+        app.mount("/v3", image_api(app.state.v3, users, json.loads(os.environ["AGENT_IMAGE_WORKERS_JSON"])))
 
     app.mount("/", StaticFiles(directory=Path(__file__).resolve().parents[2] / "web", html=True), name="web")
     schema = app.openapi()
